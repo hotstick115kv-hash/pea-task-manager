@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PEA Task Manager Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f1f5f9; color: #1e293b; margin: 0; }
+        .brand-primary { background-color: #7c3aed; }
+
+        .calendar-header-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: #f8fafc; border-radius: 12px 12px 0 0; border: 1px solid #e2e8f0; border-bottom: none; }
+        .calendar-day-label { padding: 8px 4px; text-align: center; font-weight: 700; font-size: 11px; color: #64748b; text-transform: uppercase; }
+        .calendar-day-label.sun { color: #ef4444; }
+
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); border: 1px solid #e2e8f0; border-radius: 0 0 12px 12px; overflow: hidden; background: #e2e8f0; gap: 1px; }
+        .calendar-cell { min-height: 72px; background: #fff; padding: 4px; display: flex; flex-direction: column; gap: 2px; transition: all 0.2s; position: relative; overflow: visible; }
+        .calendar-cell.empty { background: #f8fafc; }
+        .calendar-cell:hover { background: #fdfaff; z-index: 10; }
+        .date-num { font-weight: 800; font-size: 11px; color: #94a3b8; margin-bottom: 1px; cursor: pointer; flex-shrink: 0; line-height: 1; }
+        .date-num:hover { color: #7c3aed; }
+        .today .date-num { color: #7c3aed; background: #f5f3ff; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid #ddd6fe; }
+
+        .task-chip { padding: 3px 5px; border-radius: 5px; font-size: 9px; line-height: 1.3; border-left: 3px solid; cursor: pointer; transition: all 0.15s; position: relative; overflow: hidden; }
+        .task-chip:hover { filter: brightness(0.95); }
+        .task-chip .chip-leader { font-weight: 800; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .task-chip .chip-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 8px; }
+        .task-chip-pending { background: #fffbeb; color: #92400e; border-left-color: #f59e0b; }
+        .task-chip-progress { background: #eff6ff; color: #1e40af; border-left-color: #3b82f6; }
+        .task-chip-done { background: #f0fdf4; color: #166534; border-left-color: #10b981; }
+        .more-tasks { font-size: 8px; color: #7c3aed; font-weight: 800; text-align: center; cursor: pointer; padding: 1px; background: #f5f3ff; border-radius: 4px; }
+
+        .stat-card { background: white; border-radius: 16px; padding: 1.25rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px); z-index: 50; align-items: center; justify-content: center; padding: 1rem; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 20px; width: 100%; max-width: 650px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+        .form-input { width: 100%; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.75rem; font-size: 0.875rem; transition: border 0.2s; outline: none; }
+        .form-input:focus { border-color: #7c3aed; }
+
+        #pres-mode { display: none; position: fixed; inset: 0; background: #0f172a; z-index: 100; color: white; overflow-y: auto; }
+        #pres-mode.active { display: block; }
+
+        /* Lightbox with slideshow */
+        #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.97); z-index: 200; align-items: center; justify-content: center; }
+        #lightbox.active { display: flex; }
+        #lightbox-img { max-width: 88vw; max-height: 85vh; object-fit: contain; border-radius: 8px; transition: opacity 0.2s; }
+        #lb-counter { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(255,255,255,0.12); color: white; padding: 5px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; }
+        .lb-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.12); border: none; color: white; width: 52px; height: 52px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 22px; transition: background 0.2s; z-index: 10; }
+        .lb-btn:hover { background: rgba(255,255,255,0.25); }
+        #lb-prev { left: 16px; }
+        #lb-next { right: 16px; }
+        #lb-close { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.12); border: none; color: white; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; z-index: 10; }
+        #lb-close:hover { background: rgba(239,68,68,0.7); }
+
+        /* Download button */
+        .dl-day-btn { display: inline-flex; align-items: center; gap: 6px; background: rgba(124,58,237,0.15); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); border-radius: 10px; padding: 6px 14px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .dl-day-btn:hover { background: rgba(124,58,237,0.3); }
+
+        .photo-thumbnail-container { position: relative; width: 100%; aspect-ratio: 1/1; }
+        .photo-thumbnail { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .delete-btn-abs { position: absolute; top: 4px; right: 4px; background: rgba(239,68,68,0.9); color: white; border-radius: 6px; padding: 4px; transition: all 0.2s; }
+        .delete-btn-abs:hover { transform: scale(1.1); background: #ef4444; }
+
+        /* Task action popup */
+        #popup-overlay { display:none; position:fixed; inset:0; background:rgba(15,23,42,0.4); z-index:499; }
+        #popup-overlay.visible { display:block; }
+        .task-popup { display:none; position:fixed; background:white; border-radius:14px; box-shadow:0 8px 32px rgba(0,0,0,0.22); border:1px solid #e2e8f0; z-index:500; min-width:200px; padding:6px; }
+        .task-popup.visible { display:block; }
+        .task-popup-header { padding:8px 10px 6px; border-bottom:1px solid #f1f5f9; margin-bottom:4px; }
+        .task-popup-leader { font-size:10px; font-weight:900; color:#7c3aed; }
+        .task-popup-title { font-size:12px; font-weight:700; color:#1e293b; overflow:hidden; text-overflow:ellipsis; max-width:240px; white-space:normal; line-height:1.4; }
+        .task-popup-btn { display:flex; align-items:center; gap:8px; width:100%; padding:10px 12px; border-radius:9px; font-size:13px; font-weight:700; cursor:pointer; border:none; background:none; transition:all 0.15s; text-align:left; }
+        .task-popup-btn:hover { filter:brightness(0.95); }
+        .task-popup-btn.edit { color:#4338ca; } .task-popup-btn.edit:hover { background:#eef2ff; }
+        .task-popup-btn.report { color:#059669; } .task-popup-btn.report:hover { background:#ecfdf5; }
+        .task-popup-btn.del { color:#dc2626; } .task-popup-btn.del:hover { background:#fef2f2; }
+        /* Mobile: bottom sheet */
+        @media (max-width: 640px) {
+            .task-popup { position:fixed; left:0 !important; right:0 !important; bottom:0 !important; top:auto !important; width:100% !important; min-width:unset; border-radius:20px 20px 0 0; padding:8px 8px 24px; box-shadow:0 -8px 40px rgba(0,0,0,0.18); }
+            .task-popup::before { content:''; display:block; width:40px; height:4px; background:#e2e8f0; border-radius:2px; margin:4px auto 10px; }
+            .task-popup-btn { padding:14px 16px; font-size:15px; }
+            .task-popup-title { max-width:100%; font-size:13px; }
+        }
+        /* Pres icon on calendar cell */
+        .pres-icon-btn { display:none; position:absolute; top:3px; right:3px; background:#7c3aed; color:white; border:none; border-radius:6px; width:18px; height:18px; align-items:center; justify-content:center; cursor:pointer; transition:all 0.15s; z-index:5; padding:0; }
+        .calendar-cell:hover .pres-icon-btn { display:flex; }
+        .pres-icon-btn:hover { background:#6d28d9; transform:scale(1.1); }
+
+        @media (max-width: 640px) {
+            .calendar-day-label { font-size: 9px; padding: 6px 2px; }
+            .calendar-cell { min-height: 56px; padding: 3px 2px; }
+            .date-num { font-size: 10px; }
+            .task-chip { padding: 2px 3px; border-left-width: 2px; }
+            .task-chip .chip-leader { font-size: 7px; }
+            .task-chip .chip-title { display: none; }
+            .lb-btn { width: 40px; height: 40px; font-size: 18px; }
+            .pres-icon-btn { display: flex !important; width: 15px; height: 15px; }
+            .pres-icon-btn svg { width: 8px; height: 8px; }
+        }
+        /* Landscape phone */
+        @media (max-height: 500px) and (orientation: landscape) {
+            /* Nav: shrink tight */
+            nav { height: 40px !important; }
+            nav h1 { font-size: 14px !important; line-height:1; }
+            nav p { display: none; }
+            nav .w-10 { width: 32px !important; height: 32px !important; }
+            nav button span { display: none; }
+
+            /* Stats: hide to save vertical space */
+            .grid.grid-cols-4 { display: none !important; }
+
+            /* Toolbar: compact */
+            main { padding-top: 6px !important; padding-bottom: 6px !important; }
+            .mb-8 { margin-bottom: 4px !important; }
+            .mb-5 { margin-bottom: 4px !important; }
+
+            /* Calendar header: ultra compact */
+            .bg-white.rounded-3xl > div:first-child { padding: 6px 10px !important; }
+            .bg-white.rounded-3xl h2 { font-size: 14px !important; }
+            .calendar-day-label { padding: 3px 1px; font-size: 8px; }
+
+            /* Calendar cells: ultra compact, fixed small height, scroll within */
+            .calendar-cell { min-height: 38px !important; max-height: 80px; padding: 2px 1px; overflow-y: auto; overflow-x: hidden; }
+            .calendar-cell::-webkit-scrollbar { width: 2px; }
+            .calendar-cell::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+            .date-num { font-size: 8px !important; margin-bottom: 0; line-height: 1; }
+            .today .date-num { width: 16px !important; height: 16px !important; font-size: 8px !important; }
+
+            /* Chips: dot-only in landscape */
+            .task-chip { padding: 1px 2px !important; border-left-width: 2px !important; border-radius: 3px !important; }
+            .task-chip .chip-leader { font-size: 6px !important; line-height: 1.2; }
+            .task-chip .chip-title { display: none !important; }
+
+            /* Pres icon */
+            .pres-icon-btn { width: 13px !important; height: 13px !important; top: 2px; right: 2px; }
+            .pres-icon-btn svg { width: 7px !important; height: 7px !important; }
+
+            /* Lightbox buttons */
+            .lb-btn { width: 36px !important; height: 36px !important; }
+        }
+
+        @media print {
+            body { background: white; color: black; }
+            nav, .stat-card, button, #lightbox { display: none !important; }
+            #pres-mode { position: static; background: white; color: black; overflow: visible; }
+            #pres-mode .sticky { display: none; }
+            .bg-slate-800 { background: white !important; border: 1px solid #eee !important; color: black !important; break-inside: avoid; }
+            .text-white { color: black !important; }
+            .text-slate-400 { color: #666 !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center">
+        <div class="w-14 h-14 border-4 border-purple-100 border-t-purple-600 rounded-full animate-spin mb-4"></div>
+        <p class="text-purple-700 font-bold">กำลังตรวจสอบข้อมูล...</p>
+    </div>
+
+    <!-- Lightbox Slideshow -->
+    <div id="lightbox">
+        <button id="lb-close" onclick="closeLightbox()"><i data-lucide="x" class="w-5 h-5"></i></button>
+        <button class="lb-btn" id="lb-prev" onclick="lbMove(-1)"><i data-lucide="chevron-left" class="w-6 h-6"></i></button>
+        <img id="lightbox-img" src="">
+        <button class="lb-btn" id="lb-next" onclick="lbMove(1)"><i data-lucide="chevron-right" class="w-6 h-6"></i></button>
+        <div id="lb-counter"></div>
+    </div>
+
+    <nav class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 brand-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-purple-200">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h1 class="font-black text-slate-900 leading-none text-lg">PEA Task Manager</h1>
+                    <p class="text-[10px] text-purple-600 uppercase tracking-widest font-extrabold">Digital Transformation</p>
+                </div>
+            </div>
+            <button onclick="openAssignModal()" class="brand-primary text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-purple-200 hover:scale-105 transition-all">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">มอบหมายงาน</span>
+                <span class="sm:hidden">เพิ่ม</span>
+            </button>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Stats -->
+        <div class="grid grid-cols-4 gap-3 mb-8">
+            <div class="stat-card border-b-4 border-b-slate-300">
+                <p class="text-[9px] font-black text-slate-400 uppercase mb-1">ทั้งหมด</p>
+                <div class="text-3xl font-black text-slate-800" id="count-total">0</div>
+            </div>
+            <div class="stat-card border-b-4 border-b-amber-400">
+                <p class="text-[9px] font-black text-amber-500 uppercase mb-1">รอดำเนินการ</p>
+                <div class="text-3xl font-black text-amber-500" id="count-pending">0</div>
+            </div>
+            <div class="stat-card border-b-4 border-b-blue-500">
+                <p class="text-[9px] font-black text-blue-500 uppercase mb-1">กำลังทำ</p>
+                <div class="text-3xl font-black text-blue-500" id="count-progress">0</div>
+            </div>
+            <div class="stat-card border-b-4 border-b-emerald-500">
+                <p class="text-[9px] font-black text-emerald-500 uppercase mb-1">สำเร็จ</p>
+                <div class="text-3xl font-black text-emerald-500" id="count-done">0</div>
+            </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-3 mb-5">
+            <div class="bg-white p-1 rounded-2xl border border-slate-200 flex shadow-sm">
+                <button onclick="setView('calendar')" id="btn-calendar" class="px-5 py-2 rounded-xl text-sm font-bold transition-all bg-slate-900 text-white shadow-md">ปฏิทิน</button>
+                <button onclick="setView('list')" id="btn-list" class="px-5 py-2 rounded-xl text-sm font-bold transition-all text-slate-500">รายการ</button>
+            </div>
+            <div class="relative w-full sm:w-72">
+                <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-3 text-slate-400"></i>
+                <input type="text" id="search" oninput="renderContent()" placeholder="ค้นหาภารกิจ..." class="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm w-full outline-none focus:ring-2 focus:ring-purple-100">
+            </div>
+        </div>
+
+        <!-- Calendar View -->
+        <div id="view-calendar">
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <div class="flex items-center gap-3">
+                        <h2 id="month-label" class="text-xl font-black text-slate-800"></h2>
+                        <span class="px-2.5 py-0.5 bg-purple-100 text-purple-600 rounded-full text-[9px] font-black uppercase">Live</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="moveMonth(-1)" class="w-9 h-9 flex items-center justify-center hover:bg-white rounded-xl border border-slate-200 transition-all"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                        <button onclick="moveMonth(1)" class="w-9 h-9 flex items-center justify-center hover:bg-white rounded-xl border border-slate-200 transition-all"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+                <div class="calendar-header-grid">
+                    <div class="calendar-day-label sun">อา.</div>
+                    <div class="calendar-day-label">จ.</div>
+                    <div class="calendar-day-label">อ.</div>
+                    <div class="calendar-day-label">พ.</div>
+                    <div class="calendar-day-label">พฤ.</div>
+                    <div class="calendar-day-label">ศ.</div>
+                    <div class="calendar-day-label">ส.</div>
+                </div>
+                <div id="calendar-body" class="calendar-grid"></div>
+            </div>
+        </div>
+
+        <!-- List View -->
+        <div id="view-list" class="hidden">
+            <!-- Filter Bar -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-4 flex flex-wrap gap-3 items-center">
+                <div class="flex items-center gap-2 text-[11px] font-black text-slate-400 uppercase">
+                    <i data-lucide="filter" class="w-3.5 h-3.5"></i> กรอง
+                </div>
+                <select id="filter-team" onchange="renderContent()" class="text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-purple-400 bg-white font-bold text-slate-700 flex-1 min-w-[160px]">
+                    <option value="">ทีมงานทั้งหมด</option>
+                </select>
+                <div class="flex gap-2 flex-wrap">
+                    <button onclick="setStatusFilter('')" id="sf-all" class="px-3 py-1.5 rounded-xl text-xs font-black transition-all bg-slate-900 text-white">ทั้งหมด</button>
+                    <button onclick="setStatusFilter('pending')" id="sf-pending" class="px-3 py-1.5 rounded-xl text-xs font-black transition-all bg-amber-100 text-amber-700">⏳ รอดำเนินการ</button>
+                    <button onclick="setStatusFilter('progress')" id="sf-progress" class="px-3 py-1.5 rounded-xl text-xs font-black transition-all bg-blue-100 text-blue-700">🔄 กำลังทำ</button>
+                    <button onclick="setStatusFilter('done')" id="sf-done" class="px-3 py-1.5 rounded-xl text-xs font-black transition-all bg-emerald-100 text-emerald-700">✅ สำเร็จ</button>
+                </div>
+                <span id="filter-count" class="ml-auto text-[11px] text-slate-400 font-bold"></span>
+            </div>
+
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase">
+                        <tr>
+                            <th class="px-6 py-4">ทีมงาน</th>
+                            <th class="px-6 py-4">ภารกิจ</th>
+                            <th class="px-6 py-4 cursor-pointer hover:bg-slate-100" onclick="toggleDateSort()">
+                                <div class="flex items-center gap-1">วันที่ <i data-lucide="arrow-up-down" class="w-3 h-3"></i></div>
+                            </th>
+                            <th class="px-6 py-4">สถานะ</th>
+                            <th class="px-6 py-4 text-right">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="list-body" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Presentation Mode -->
+    <div id="pres-mode">
+        <div class="sticky top-0 bg-slate-900/90 backdrop-blur-xl p-4 border-b border-slate-800 flex justify-between items-center z-50">
+            <div class="flex items-center gap-3 flex-wrap">
+                <h2 id="pres-date-title" class="text-lg font-black"></h2>
+                <button id="dl-zip-btn" onclick="downloadDayZip()" class="dl-day-btn">
+                    <i data-lucide="download" class="w-4 h-4"></i> ดาวน์โหลดทั้งหมด
+                </button>
+                <button onclick="window.print()" class="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border border-white/10">
+                    <i data-lucide="printer" class="w-3.5 h-3.5"></i> พิมพ์
+                </button>
+            </div>
+            <button onclick="closePresMode()" class="bg-rose-500 text-white p-2.5 rounded-xl"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="max-w-4xl mx-auto p-6" id="pres-content"></div>
+    </div>
+
+    <!-- Assign Modal -->
+    <div id="assignModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="p-6 border-b flex justify-between items-center bg-slate-50">
+                <h3 id="assign-modal-title" class="text-xl font-black">มอบหมายภารกิจ</h3>
+                <button onclick="closeModal('assignModal')" class="p-2 hover:bg-slate-200 rounded-full"><i data-lucide="x"></i></button>
+            </div>
+            <form id="taskForm" class="p-6 space-y-5" onsubmit="handleSaveTask(event)">
+                <input type="hidden" id="field-id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 mb-1.5 block">สายงาน</label>
+                        <select id="field-team" class="form-input" required></select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 mb-1.5 block">วันที่</label>
+                        <input type="date" id="field-date" class="form-input" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 mb-1.5 block">รายละเอียดงาน</label>
+                    <input type="text" id="field-title" class="form-input" required>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 mb-1.5 block">แนบไฟล์สั่งงาน (รูปภาพ/PDF)</label>
+                    <input type="file" id="field-files" class="form-input" accept="image/*,application/pdf" multiple onchange="fastFilePreview(this, 'assign-previews')">
+                </div>
+                <div id="assign-previews" class="grid grid-cols-4 gap-3"></div>
+                <button type="submit" id="btn-submit" class="w-full py-3.5 brand-primary text-white rounded-2xl font-bold">บันทึกภารกิจ</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="reportModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="p-6 border-b flex justify-between items-center bg-emerald-50">
+                <h3 class="text-xl font-black text-emerald-900">รายงานผลหน้างาน</h3>
+                <button onclick="closeModal('reportModal')" class="p-2 hover:bg-emerald-200 rounded-full text-emerald-900"><i data-lucide="x"></i></button>
+            </div>
+            <form id="reportForm" class="p-6 space-y-5" onsubmit="handleUpdateStatus(event)">
+                <input type="hidden" id="report-task-id">
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 mb-1.5 block">สถานะงาน</label>
+                    <select id="report-status" class="form-input">
+                        <option value="pending">รอดำเนินการ</option>
+                        <option value="progress">ระหว่างดำเนินการ</option>
+                        <option value="done">สำเร็จแล้ว</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 mb-1.5 block">สรุปการดำเนินงาน</label>
+                    <textarea id="report-note" class="form-input h-28"></textarea>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 mb-1.5 block">ภาพถ่ายหน้างาน / PDF</label>
+                    <input type="file" id="report-files" class="form-input" accept="image/*,application/pdf" multiple onchange="fastFilePreview(this, 'report-previews')">
+                </div>
+                <div id="report-previews" class="grid grid-cols-4 gap-3"></div>
+                <button type="submit" id="btn-report-submit" class="w-full py-3.5 bg-emerald-600 text-white rounded-2xl font-bold">ส่งรายงานผล</button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAANdDbkjZAx9_PLSX1CZyYDbsF9_fv-4w",
+            authDomain: "pea-task-manager.firebaseapp.com",
+            projectId: "pea-task-manager",
+            storageBucket: "pea-task-manager.firebasestorage.app",
+            messagingSenderId: "831251520185",
+            appId: "1:831251520185:web:443db99fdf5ab0f13f5968"
+        };
+
+        const TEAMS = [
+            { id: "T01", name: "ทีมปรับปรุงระบบไฟฟ้า (หน.โกวิท)" },
+            { id: "T02", name: "ทีมซ่อมแซมระบบไฟฟ้า (หน.รณภัทร)" },
+            { id: "T03", name: "ทีมตัดต้นไม้ / ริดรอน (หน.อภิรักษ์)" },
+            { id: "T04", name: "ทีมแก้ไขปัญหาระบบไฟฟ้า (หน.วัชรินทร์)" },
+            { id: "T05", name: "ศูนย์ประสานงานขอดับไฟ (หน.วัชฤทธิ์)" },
+            { id: "T06", name: "ทีมงานฮอทไลน์ (Hotline) (หน.กลศาสตร์)" },
+            { id: "T07", name: "ทีม Patrol 115 kV (หน.กลศาสตร์)" },
+            { id: "T08", name: "ทีม Patrol 33 kV & อุปกรณ์ (หน.อดิศร)" },
+            { id: "T09", name: "ทีม Patrol 33 kV & ละเมิด (หน.ธันวา)" },
+            { id: "T10", name: "คุมงานก่อสร้าง & จ้างเหมา (หน.นพดล)" }
+        ];
+
+        const TH_MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+        let db, auth, tasks = [], activeView = 'calendar', currentMonth = new Date();
+        let listSortDir = 'desc';
+        let currentPresDate = '';
+
+        // Lightbox state
+        let lbImages = [], lbIndex = 0;
+
+        const getLeader = id => TEAMS.find(t => t.id === id)?.name.match(/\(([^)]+)\)/)?.[1].replace(/หน\./g,"").trim() || id;
+        const parseFiles = d => { if (!d) return []; try { return typeof d === 'string' ? JSON.parse(d) : d; } catch(e) { return []; } };
+
+        const processFile = file => new Promise(resolve => {
+            const reader = new FileReader();
+            if (file.type === 'application/pdf') {
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve({ id: crypto.randomUUID(), t: 'pdf', d: reader.result, n: file.name });
+                return;
+            }
+            reader.readAsDataURL(file);
+            reader.onload = e => {
+                const img = new Image();
+                img.src = e.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width, h = img.height;
+                    const MAX = 800;
+                    if (w > h) { if (w > MAX) { h *= MAX/w; w = MAX; } }
+                    else { if (h > MAX) { w *= MAX/h; h = MAX; } }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    resolve({ id: crypto.randomUUID(), t: 'img', d: canvas.toDataURL('image/jpeg', 0.5), n: file.name });
+                };
+            };
+        });
+
+        window.fastFilePreview = (input, containerId) => {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            Array.from(input.files).forEach(file => {
+                if (file.type === 'application/pdf') {
+                    container.innerHTML += `<div class="bg-rose-50 rounded-lg aspect-square flex flex-col items-center justify-center border border-rose-200"><i data-lucide="file-text" class="text-rose-500"></i><span class="text-[8px] font-bold">PDF</span></div>`;
+                } else {
+                    const url = URL.createObjectURL(file);
+                    container.innerHTML += `<div class="photo-thumbnail-container"><img src="${url}" class="photo-thumbnail"></div>`;
+                }
+            });
+            lucide.createIcons();
+        };
+
+        const init = async () => {
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app); db = getFirestore(app);
+                await signInAnonymously(auth);
+                onAuthStateChanged(auth, user => {
+                    if (user) { document.getElementById('loading').style.display = 'none'; startSync(); }
+                });
+                document.getElementById('field-team').innerHTML = `<option value="">เลือกสายงาน...</option>` + TEAMS.map(t => `<option value="${t.id}">${t.id}: ${t.name}</option>`).join('');
+                lucide.createIcons();
+            } catch(err) { console.error(err); }
+        };
+
+        const startSync = () => {
+            onSnapshot(collection(db, 'tasks'), snap => {
+                tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderContent();
+            });
+        };
+
+        window.renderContent = () => {
+            const s = document.getElementById('search').value.toLowerCase();
+            const filtered = tasks.filter(t =>
+                t.title.toLowerCase().includes(s) ||
+                getLeader(t.teamId).toLowerCase().includes(s) ||
+                t.date.includes(s)
+            );
+            if (activeView === 'calendar') renderCalendar(filtered); else renderList(filtered);
+            updateStats();
+        };
+
+        const updateStats = () => {
+            document.getElementById('count-total').innerText = tasks.length;
+            document.getElementById('count-pending').innerText = tasks.filter(t => t.status === 'pending').length;
+            document.getElementById('count-progress').innerText = tasks.filter(t => t.status === 'progress').length;
+            document.getElementById('count-done').innerText = tasks.filter(t => t.status === 'done').length;
+        };
+
+        const renderCalendar = (data) => {
+            const y = currentMonth.getFullYear(), m = currentMonth.getMonth();
+            document.getElementById('month-label').innerText = `${TH_MONTHS[m]} ${y+543}`;
+            const body = document.getElementById('calendar-body');
+            body.innerHTML = '';
+            const first = new Date(y, m, 1).getDay(), last = new Date(y, m+1, 0).getDate();
+            const todayStr = new Date().toISOString().slice(0,10);
+
+            for (let i = 0; i < first; i++) body.innerHTML += `<div class="calendar-cell empty"></div>`;
+
+            for (let d = 1; d <= last; d++) {
+                const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const dayTasks = data.filter(t => t.date === dateStr);
+                const isToday = dateStr === todayStr;
+
+                body.innerHTML += `
+                    <div class="calendar-cell${isToday ? ' today' : ''}${dayTasks.length > 0 ? ' has-tasks' : ''}">
+                        <button class="pres-icon-btn" onclick="openPresentationMode('${dateStr}')" title="นำเสนอวันนี้">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                        </button>
+                        <span class="date-num">${d}</span>
+                        <div style="display:flex;flex-direction:column;gap:2px;">
+                            ${dayTasks.map(t => `
+                                <div class="task-chip task-chip-${t.status}" onclick="showTaskPopup(event,'${t.id}')">
+                                    <span class="chip-leader">${getLeader(t.teamId)}</span>
+                                    <span class="chip-title">${t.title}</span>
+                                </div>`).join('')}
+                        </div>
+                    </div>`;
+            }
+            lucide.createIcons();
+        };
+
+        window.toggleDateSort = () => { listSortDir = listSortDir === 'desc' ? 'asc' : 'desc'; renderContent(); };
+
+        const populateTeamFilter = () => {
+            const sel = document.getElementById('filter-team');
+            if (!sel || sel.options.length > 1) return;
+            TEAMS.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.text = t.id + ': ' + t.name;
+                sel.appendChild(opt);
+            });
+        };
+
+        let activeStatusFilter = '';
+        window.setStatusFilter = (val) => {
+            activeStatusFilter = val;
+            ['all','pending','progress','done'].forEach(k => {
+                const el = document.getElementById('sf-' + k);
+                if (!el) return;
+                const isActive = (k === 'all' && val === '') || k === val;
+                el.style.boxShadow = isActive ? '0 0 0 2px currentColor' : '';
+                el.style.opacity = isActive ? '1' : '0.65';
+            });
+            renderContent();
+        };
+
+        const renderList = (data) => {
+            populateTeamFilter();
+            const teamFilter = document.getElementById('filter-team')?.value || '';
+            let filtered = data;
+            if (teamFilter) filtered = filtered.filter(t => t.teamId === teamFilter);
+            if (activeStatusFilter) filtered = filtered.filter(t => t.status === activeStatusFilter);
+            const sorted = [...filtered].sort((a,b) => listSortDir === 'desc' ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date));
+
+            const countEl = document.getElementById('filter-count');
+            if (countEl) countEl.innerText = 'แสดง ' + sorted.length + ' รายการ';
+
+            document.getElementById('list-body').innerHTML = sorted.map(t => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-6 py-4">
+                        <div class="text-[10px] font-black text-purple-600 mb-0.5">${t.teamId}</div>
+                        <div class="font-bold text-slate-800 text-sm">${getLeader(t.teamId)}</div>
+                    </td>
+                    <td class="px-6 py-4"><div class="font-bold text-slate-700 text-sm">${t.title}</div></td>
+                    <td class="px-6 py-4">
+                        <div class="text-[11px] text-slate-500 font-bold flex items-center gap-1">
+                            <i data-lucide="calendar" class="w-3 h-3"></i> ${t.date}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${t.status==='done'?'bg-emerald-100 text-emerald-700':t.status==='progress'?'bg-blue-100 text-blue-700':'bg-amber-100 text-amber-700'}">
+                            ${t.status==='done'?'สำเร็จ':t.status==='progress'?'กำลังทำ':'รอดำเนินการ'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex gap-2 flex-wrap justify-end">
+                            <button onclick="openEditTaskModal('${t.id}')" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-black hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all">
+                                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> แก้ไข
+                            </button>
+                            <button onclick="openReportModal('${t.id}')" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-black hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all">
+                                <i data-lucide="clipboard-check" class="w-3.5 h-3.5"></i> รายงานผล
+                            </button>
+                            <button onclick="handleDeleteTask('${t.id}')" class="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-xs font-black hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> ลบ
+                            </button>
+                        </div>
+                    </td>
+                </tr>`).join('') || `<tr><td colspan="5" class="py-16 text-center text-slate-400 italic">ไม่พบข้อมูลที่ค้นหา</td></tr>`;
+            lucide.createIcons();
+        };
+
+        window.openEditTaskModal = (id) => {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+            document.getElementById('assign-modal-title').innerText = "แก้ไขภารกิจ";
+            document.getElementById('field-id').value = task.id;
+            document.getElementById('field-team').value = task.teamId;
+            document.getElementById('field-date').value = task.date;
+            document.getElementById('field-title').value = task.title;
+            renderFilePreviews(parseFiles(task.files_v2), 'assign-previews', 'files_v2', task.id);
+            openModal('assignModal');
+        };
+
+        window.openReportModal = (id) => {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+            document.getElementById('report-task-id').value = id;
+            document.getElementById('report-status').value = task.status;
+            document.getElementById('report-note').value = task.reportNote || '';
+            renderFilePreviews(parseFiles(task.reportFiles_v2), 'report-previews', 'reportFiles_v2', task.id);
+            openModal('reportModal');
+        };
+
+        const renderFilePreviews = (files, containerId, fieldName, taskId) => {
+            const container = document.getElementById(containerId);
+            container.innerHTML = files.map(f => `
+                <div class="photo-thumbnail-container">
+                    ${f.t === 'pdf'
+                        ? `<div class="bg-rose-50 rounded-lg aspect-square flex flex-col items-center justify-center border border-rose-200"><i data-lucide="file-text" class="text-rose-500"></i><span class="text-[8px] font-bold">PDF</span></div>`
+                        : `<img src="${f.d}" class="photo-thumbnail">`}
+                    <button type="button" onclick="deleteSpecificFile('${taskId}','${fieldName}','${f.id}')" class="delete-btn-abs"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                </div>`).join('');
+            lucide.createIcons();
+        };
+
+        window.deleteSpecificFile = async (taskId, fieldName, fileId) => {
+            if (!confirm("ต้องการลบไฟล์นี้หรือไม่?")) return;
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+            const updatedFiles = parseFiles(task[fieldName]).filter(f => f.id !== fileId);
+            await updateDoc(doc(db, 'tasks', taskId), { [fieldName]: JSON.stringify(updatedFiles) });
+            if (fieldName === 'files_v2') renderFilePreviews(updatedFiles, 'assign-previews', 'files_v2', taskId);
+            else renderFilePreviews(updatedFiles, 'report-previews', 'reportFiles_v2', taskId);
+        };
+
+        window.handleSaveTask = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit');
+            btn.disabled = true; btn.innerText = "กำลังบันทึก...";
+            const id = document.getElementById('field-id').value;
+            const files = Array.from(document.getElementById('field-files').files);
+            try {
+                const data = {
+                    teamId: document.getElementById('field-team').value,
+                    date: document.getElementById('field-date').value,
+                    title: document.getElementById('field-title').value,
+                };
+                if (files.length > 0) {
+                    const processedNew = await Promise.all(files.map(f => processFile(f)));
+                    const task = tasks.find(t => t.id === id);
+                    const existing = id ? parseFiles(task?.files_v2) : [];
+                    data.files_v2 = JSON.stringify([...existing, ...processedNew]);
+                }
+                if (id) await updateDoc(doc(db, 'tasks', id), data);
+                else { data.status = 'pending'; data.createdAt = serverTimestamp(); await addDoc(collection(db, 'tasks'), data); }
+                closeModal('assignModal');
+                document.getElementById('taskForm').reset();
+            } catch(err) { alert(err.message); }
+            finally { btn.disabled = false; btn.innerText = "บันทึกภารกิจ"; }
+        };
+
+        window.handleUpdateStatus = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-report-submit');
+            btn.disabled = true; btn.innerText = "กำลังส่ง...";
+            const id = document.getElementById('report-task-id').value;
+            const files = Array.from(document.getElementById('report-files').files);
+            try {
+                const updateData = {
+                    status: document.getElementById('report-status').value,
+                    reportNote: document.getElementById('report-note').value
+                };
+                if (files.length > 0) {
+                    const processedNew = await Promise.all(files.map(f => processFile(f)));
+                    const task = tasks.find(t => t.id === id);
+                    const existing = parseFiles(task?.reportFiles_v2);
+                    updateData.reportFiles_v2 = JSON.stringify([...existing, ...processedNew]);
+                }
+                await updateDoc(doc(db, 'tasks', id), updateData);
+                closeModal('reportModal');
+                document.getElementById('reportForm').reset();
+            } catch(err) { alert(err.message); }
+            finally { btn.disabled = false; btn.innerText = "ส่งรายงานผล"; }
+        };
+
+        // ---- Presentation Mode ----
+        window.openPresentationMode = (date) => {
+            currentPresDate = date;
+            const dayTasks = tasks.filter(t => t.date === date);
+            document.getElementById('pres-date-title').innerText = "สรุปภารกิจ " + date;
+
+            // Build image list for lightbox (all images across all tasks that day)
+            lbImages = [];
+            dayTasks.forEach(t => {
+                [...parseFiles(t.files_v2), ...parseFiles(t.reportFiles_v2)]
+                    .filter(f => f.t === 'img')
+                    .forEach(f => lbImages.push(f.d));
+            });
+
+            document.getElementById('pres-content').innerHTML = dayTasks.map((t, ti) => {
+                const taskF = parseFiles(t.files_v2);
+                const reportF = parseFiles(t.reportFiles_v2);
+
+                // Calculate global image indices for lightbox
+                let imgIdx = 0;
+                dayTasks.slice(0, ti).forEach(prev => {
+                    imgIdx += parseFiles(prev.files_v2).filter(f => f.t === 'img').length;
+                    imgIdx += parseFiles(prev.reportFiles_v2).filter(f => f.t === 'img').length;
+                });
+                let localTaskImgIdx = imgIdx;
+                let localReportImgIdx = imgIdx + taskF.filter(f => f.t === 'img').length;
+
+                return `
+                <div class="bg-slate-800 p-5 rounded-2xl mb-5 border border-slate-700">
+                    <div class="flex justify-between items-start mb-3 gap-3">
+                        <div>
+                            <h3 class="text-lg font-black leading-snug">${t.title}</h3>
+                            <p class="text-slate-400 text-xs mt-0.5">${getLeader(t.teamId)}</p>
+                        </div>
+                        <span class="shrink-0 px-3 py-1 rounded-full text-[10px] font-black uppercase ${t.status==='done'?'bg-emerald-500 text-white':t.status==='progress'?'bg-blue-500 text-white':'bg-amber-500 text-white'}">
+                            ${t.status==='done'?'สำเร็จ':t.status==='progress'?'กำลังทำ':'รอดำเนินการ'}
+                        </span>
+                    </div>
+                    ${t.reportNote ? `<div class="bg-emerald-500/10 p-3 rounded-xl border-l-4 border-emerald-500 mb-3 text-emerald-400 text-sm italic">"${t.reportNote}"</div>` : ''}
+                    <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                        ${taskF.map((f,fi) => f.t==='pdf'
+                            ? `<a href="${f.d}" download="${f.n}" class="bg-slate-700 p-3 rounded-xl flex flex-col items-center justify-center gap-1 text-[10px] text-slate-300 hover:bg-slate-600 transition-all"><i data-lucide="file-text" class="w-5 h-5 text-rose-400"></i>ไฟล์สั่งงาน</a>`
+                            : `<img src="${f.d}" onclick="openLightbox(${localTaskImgIdx + fi})" class="rounded-xl w-full aspect-square object-cover cursor-pointer border border-white/5 hover:scale-105 transition-all hover:border-purple-400/50">`
+                        ).join('')}
+                        ${reportF.map((f,fi) => f.t==='pdf'
+                            ? `<a href="${f.d}" download="${f.n}" class="bg-emerald-900/30 p-3 rounded-xl flex flex-col items-center justify-center gap-1 text-[10px] text-emerald-400 hover:bg-emerald-900/50 transition-all"><i data-lucide="file-text" class="w-5 h-5"></i>ไฟล์รายงาน</a>`
+                            : `<img src="${f.d}" onclick="openLightbox(${localReportImgIdx + fi})" class="rounded-xl w-full aspect-square object-cover cursor-pointer border border-emerald-500/20 hover:scale-105 transition-all hover:border-emerald-400">`
+                        ).join('')}
+                    </div>
+                </div>`;
+            }).join('') || '<p class="text-center text-slate-500 py-10">ไม่มีข้อมูลงาน</p>';
+
+            document.getElementById('pres-mode').classList.add('active');
+            lucide.createIcons();
+        };
+
+        // ---- Lightbox Slideshow ----
+        window.openLightbox = (idx) => {
+            if (!lbImages.length) return;
+            lbIndex = idx;
+            updateLightbox();
+            document.getElementById('lightbox').classList.add('active');
+        };
+
+        window.lbMove = (dir) => {
+            lbIndex = (lbIndex + dir + lbImages.length) % lbImages.length;
+            updateLightbox();
+        };
+
+        const updateLightbox = () => {
+            const img = document.getElementById('lightbox-img');
+            img.style.opacity = 0;
+            setTimeout(() => {
+                img.src = lbImages[lbIndex];
+                img.style.opacity = 1;
+            }, 120);
+            document.getElementById('lb-counter').innerText = `${lbIndex + 1} / ${lbImages.length}`;
+            document.getElementById('lb-prev').style.display = lbImages.length > 1 ? 'flex' : 'none';
+            document.getElementById('lb-next').style.display = lbImages.length > 1 ? 'flex' : 'none';
+        };
+
+        window.closeLightbox = () => document.getElementById('lightbox').classList.remove('active');
+
+        // Keyboard navigation for lightbox
+        document.addEventListener('keydown', e => {
+            if (!document.getElementById('lightbox').classList.contains('active')) return;
+            if (e.key === 'ArrowRight') lbMove(1);
+            if (e.key === 'ArrowLeft') lbMove(-1);
+            if (e.key === 'Escape') closeLightbox();
+        });
+
+        // ---- Download Day ZIP ----
+        window.downloadDayZip = async () => {
+            const btn = document.getElementById('dl-zip-btn');
+            btn.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> กำลังบีบอัด...`;
+            lucide.createIcons();
+
+            const dayTasks = tasks.filter(t => t.date === currentPresDate);
+            const zip = new JSZip();
+            const folder = zip.folder(`PEA_${currentPresDate}`);
+
+            let imgCount = 0, pdfCount = 0;
+            dayTasks.forEach((t, ti) => {
+                const leader = getLeader(t.teamId);
+                const prefix = `${String(ti+1).padStart(2,'0')}_${leader}`;
+
+                parseFiles(t.files_v2).forEach((f, fi) => {
+                    if (f.t === 'img') {
+                        const base64 = f.d.split(',')[1];
+                        folder.file(`${prefix}_สั่งงาน_${fi+1}.jpg`, base64, { base64: true });
+                        imgCount++;
+                    } else if (f.t === 'pdf') {
+                        const base64 = f.d.split(',')[1];
+                        folder.file(`${prefix}_สั่งงาน_${fi+1}.pdf`, base64, { base64: true });
+                        pdfCount++;
+                    }
+                });
+
+                parseFiles(t.reportFiles_v2).forEach((f, fi) => {
+                    if (f.t === 'img') {
+                        const base64 = f.d.split(',')[1];
+                        folder.file(`${prefix}_รายงาน_${fi+1}.jpg`, base64, { base64: true });
+                        imgCount++;
+                    } else if (f.t === 'pdf') {
+                        const base64 = f.d.split(',')[1];
+                        folder.file(`${prefix}_รายงาน_${fi+1}.pdf`, base64, { base64: true });
+                        pdfCount++;
+                    }
+                });
+            });
+
+            if (imgCount + pdfCount === 0) {
+                alert("ไม่มีไฟล์ในวันนี้");
+                btn.innerHTML = `<i data-lucide="download" class="w-4 h-4"></i> ดาวน์โหลดทั้งหมด`;
+                lucide.createIcons();
+                return;
+            }
+
+            const blob = await zip.generateAsync({ type: 'blob' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `PEA_${currentPresDate}.zip`;
+            a.click(); URL.revokeObjectURL(url);
+
+            btn.innerHTML = `<i data-lucide="download" class="w-4 h-4"></i> ดาวน์โหลดทั้งหมด`;
+            lucide.createIcons();
+        };
+
+        // ---- General UI ----
+        window.openAssignModal = () => {
+            document.getElementById('assign-modal-title').innerText = "มอบหมายภารกิจ";
+            document.getElementById('field-id').value = "";
+            document.getElementById('taskForm').reset();
+            document.getElementById('assign-previews').innerHTML = "";
+            openModal('assignModal');
+        };
+        window.openModal = id => document.getElementById(id).classList.add('active');
+        window.closeModal = id => document.getElementById(id).classList.remove('active');
+        window.setView = v => {
+            activeView = v; renderContent();
+            document.getElementById('view-calendar').classList.toggle('hidden', v !== 'calendar');
+            document.getElementById('view-list').classList.toggle('hidden', v !== 'list');
+            const bC = document.getElementById('btn-calendar'), bL = document.getElementById('btn-list');
+            bC.className = v==='calendar' ? 'px-5 py-2 rounded-xl text-sm font-bold transition-all bg-slate-900 text-white shadow-md' : 'px-5 py-2 rounded-xl text-sm font-bold transition-all text-slate-500';
+            bL.className = v==='list' ? 'px-5 py-2 rounded-xl text-sm font-bold transition-all bg-slate-900 text-white shadow-md' : 'px-5 py-2 rounded-xl text-sm font-bold transition-all text-slate-500';
+        };
+        window.moveMonth = d => { currentMonth.setMonth(currentMonth.getMonth()+d); renderContent(); };
+        window.handleDeleteTask = async id => { if (confirm("ลบภารกิจนี้?")) await deleteDoc(doc(db, 'tasks', id)); };
+        window.closePresMode = () => document.getElementById('pres-mode').classList.remove('active');
+
+        // --- Task Popup ---
+        let popupTaskId = null;
+        window.showTaskPopup = (e, id) => {
+            e.stopPropagation();
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+            popupTaskId = id;
+            document.getElementById('popup-leader').innerText = task.teamId + ' · ' + getLeader(task.teamId);
+            document.getElementById('popup-title').innerText = task.title;
+            const popup = document.getElementById('task-popup');
+            const overlay = document.getElementById('popup-overlay');
+            popup.classList.add('visible');
+            overlay.classList.add('visible');
+            if (window.innerWidth <= 640) {
+                // Mobile: bottom sheet — CSS handles position
+                popup.style.left = ''; popup.style.top = ''; popup.style.right = ''; popup.style.bottom = '';
+            } else {
+                // Desktop: smart position near click
+                const rect = e.currentTarget.getBoundingClientRect();
+                const pw = 220, ph = 170;
+                let left = rect.left, top = rect.bottom + 6;
+                if (left + pw > window.innerWidth - 12) left = window.innerWidth - pw - 12;
+                if (left < 8) left = 8;
+                if (top + ph > window.innerHeight - 12) top = rect.top - ph - 4;
+                if (top < 8) top = 8;
+                popup.style.left = left + 'px';
+                popup.style.top = top + 'px';
+            }
+        };
+
+        window.closeTaskPopup = () => {
+            document.getElementById('task-popup').classList.remove('visible');
+            document.getElementById('popup-overlay').classList.remove('visible');
+        };
+
+        window.popupAction = (action) => {
+            closeTaskPopup();
+            if (!popupTaskId) return;
+            const tid = popupTaskId; popupTaskId = null;
+            if (action === 'edit') openEditTaskModal(tid);
+            else if (action === 'report') openReportModal(tid);
+            else if (action === 'delete') handleDeleteTask(tid);
+        };
+
+        // Close popup on outside click (desktop)
+        document.addEventListener('click', (e) => {
+            const popup = document.getElementById('task-popup');
+            if (popup && popup.classList.contains('visible') && !popup.contains(e.target)) {
+                closeTaskPopup();
+            }
+        });
+
+        init();
+    </script>
+    <!-- Task Action Popup -->
+    <div id="popup-overlay" onclick="closeTaskPopup()"></div>
+    <div id="task-popup" class="task-popup">
+        <div class="task-popup-header">
+            <div class="task-popup-leader" id="popup-leader"></div>
+            <div class="task-popup-title" id="popup-title"></div>
+        </div>
+        <button class="task-popup-btn report" onclick="popupAction('report')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            รายงานผล
+        </button>
+        <button class="task-popup-btn edit" onclick="popupAction('edit')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            แก้ไขงาน
+        </button>
+        <button class="task-popup-btn del" onclick="popupAction('delete')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+            ลบงาน
+        </button>
+    </div>
+
+</body>
+</html>
