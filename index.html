@@ -370,6 +370,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref as sRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAANdDbkjZAx9_PLSX1CZyYDbsF9_fv-4w",
@@ -394,7 +395,7 @@
         ];
 
         const TH_MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
-        let db, auth, tasks = [], activeView = 'calendar', currentMonth = new Date();
+        let db, auth, storage, tasks = [], activeView = 'calendar', currentMonth = new Date();
         let listSortDir = 'desc';
         let currentPresDate = '';
 
@@ -404,13 +405,9 @@
         const getLeader = id => TEAMS.find(t => t.id === id)?.name.match(/\(([^)]+)\)/)?.[1].replace(/หน\./g,"").trim() || id;
         const parseFiles = d => { if (!d) return []; try { return typeof d === 'string' ? JSON.parse(d) : d; } catch(e) { return []; } };
 
-        const processFile = file => new Promise(resolve => {
+        // Compress image → Blob (no base64)
+        const compressImage = (file) => new Promise(resolve => {
             const reader = new FileReader();
-            if (file.type === 'application/pdf') {
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve({ id: crypto.randomUUID(), t: 'pdf', d: reader.result, n: file.name });
-                return;
-            }
             reader.readAsDataURL(file);
             reader.onload = e => {
                 const img = new Image();
@@ -418,15 +415,34 @@
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
                     let w = img.width, h = img.height;
-                    const MAX = 800;
-                    if (w > h) { if (w > MAX) { h *= MAX/w; w = MAX; } }
-                    else { if (h > MAX) { w *= MAX/h; h = MAX; } }
+                    const MAX = 1200;
+                    if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+                    else { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
                     canvas.width = w; canvas.height = h;
                     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    resolve({ id: crypto.randomUUID(), t: 'img', d: canvas.toDataURL('image/jpeg', 0.5), n: file.name });
+                    canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.75);
                 };
             };
         });
+
+        // Upload file to Firebase Storage → return metadata object (no base64)
+        const processFile = async (file) => {
+            const id = crypto.randomUUID();
+            const ext = file.type === 'application/pdf' ? 'pdf' : 'jpg';
+            const path = `tasks/${id}.${ext}`;
+            const storageRef = sRef(storage, path);
+
+            let uploadBlob;
+            if (file.type === 'application/pdf') {
+                uploadBlob = file;
+            } else {
+                uploadBlob = await compressImage(file);
+            }
+
+            await uploadBytes(storageRef, uploadBlob);
+            const url = await getDownloadURL(storageRef);
+            return { id, t: file.type === 'application/pdf' ? 'pdf' : 'img', url, path, n: file.name };
+        };
 
         window.fastFilePreview = (input, containerId) => {
             const container = document.getElementById(containerId);
@@ -445,7 +461,7 @@
         const init = async () => {
             try {
                 const app = initializeApp(firebaseConfig);
-                auth = getAuth(app); db = getFirestore(app);
+                auth = getAuth(app); db = getFirestore(app); storage = getStorage(app);
                 await signInAnonymously(auth);
                 onAuthStateChanged(auth, user => {
                     if (user) { document.getElementById('loading').style.display = 'none'; startSync(); }
@@ -606,13 +622,15 @@
             openModal('reportModal');
         };
 
+        const fileUrl = f => f.url || f.d || '';  // support new (url) and legacy (d/base64)
+
         const renderFilePreviews = (files, containerId, fieldName, taskId) => {
             const container = document.getElementById(containerId);
             container.innerHTML = files.map(f => `
                 <div class="photo-thumbnail-container">
                     ${f.t === 'pdf'
-                        ? `<div class="bg-rose-50 rounded-lg aspect-square flex flex-col items-center justify-center border border-rose-200"><i data-lucide="file-text" class="text-rose-500"></i><span class="text-[8px] font-bold">PDF</span></div>`
-                        : `<img src="${f.d}" class="photo-thumbnail">`}
+                        ? `<div class="bg-rose-50 rounded-lg aspect-square flex flex-col items-center justify-center border border-rose-200"><i data-lucide="file-text" class="text-rose-500"></i><span class="text-[8px] font-bold truncate px-1">${f.n||'PDF'}</span></div>`
+                        : `<img src="${fileUrl(f)}" class="photo-thumbnail">`}
                     <button type="button" onclick="deleteSpecificFile('${taskId}','${fieldName}','${f.id}')" class="delete-btn-abs"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
                 </div>`).join('');
             lucide.createIcons();
@@ -622,7 +640,13 @@
             if (!confirm("ต้องการลบไฟล์นี้หรือไม่?")) return;
             const task = tasks.find(t => t.id === taskId);
             if (!task) return;
-            const updatedFiles = parseFiles(task[fieldName]).filter(f => f.id !== fileId);
+            const allFiles = parseFiles(task[fieldName]);
+            const fileToDelete = allFiles.find(f => f.id === fileId);
+            // Delete from Storage if it has a path (new format)
+            if (fileToDelete?.path) {
+                await deleteObject(sRef(storage, fileToDelete.path)).catch(() => {});
+            }
+            const updatedFiles = allFiles.filter(f => f.id !== fileId);
             await updateDoc(doc(db, 'tasks', taskId), { [fieldName]: JSON.stringify(updatedFiles) });
             if (fieldName === 'files_v2') renderFilePreviews(updatedFiles, 'assign-previews', 'files_v2', taskId);
             else renderFilePreviews(updatedFiles, 'report-previews', 'reportFiles_v2', taskId);
@@ -719,12 +743,12 @@
                     ${t.reportNote ? `<div class="bg-emerald-500/10 p-3 rounded-xl border-l-4 border-emerald-500 mb-3 text-emerald-400 text-sm italic">"${t.reportNote}"</div>` : ''}
                     <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
                         ${taskF.map((f,fi) => f.t==='pdf'
-                            ? `<a href="${f.d}" download="${f.n}" class="bg-slate-700 p-3 rounded-xl flex flex-col items-center justify-center gap-1 text-[10px] text-slate-300 hover:bg-slate-600 transition-all"><i data-lucide="file-text" class="w-5 h-5 text-rose-400"></i>ไฟล์สั่งงาน</a>`
-                            : `<img src="${f.d}" onclick="openLightbox(${localTaskImgIdx + fi})" class="rounded-xl w-full aspect-square object-cover cursor-pointer border border-white/5 hover:scale-105 transition-all hover:border-purple-400/50">`
+                            ? `<a href="${f.url||f.d}" download="${f.n}" target="_blank" class="bg-slate-700 p-3 rounded-xl flex flex-col items-center justify-center gap-1 text-[10px] text-slate-300 hover:bg-slate-600 transition-all"><i data-lucide="file-text" class="w-5 h-5 text-rose-400"></i>ไฟล์สั่งงาน</a>`
+                            : `<img src="${f.url||f.d}" onclick="openLightbox(${localTaskImgIdx + fi})" class="rounded-xl w-full aspect-square object-cover cursor-pointer border border-white/5 hover:scale-105 transition-all hover:border-purple-400/50">`
                         ).join('')}
                         ${reportF.map((f,fi) => f.t==='pdf'
-                            ? `<a href="${f.d}" download="${f.n}" class="bg-emerald-900/30 p-3 rounded-xl flex flex-col items-center justify-center gap-1 text-[10px] text-emerald-400 hover:bg-emerald-900/50 transition-all"><i data-lucide="file-text" class="w-5 h-5"></i>ไฟล์รายงาน</a>`
-                            : `<img src="${f.d}" onclick="openLightbox(${localReportImgIdx + fi})" class="rounded-xl w-full aspect-square object-cover cursor-pointer border border-emerald-500/20 hover:scale-105 transition-all hover:border-emerald-400">`
+                            ? `<a href="${f.url||f.d}" download="${f.n}" target="_blank" class="bg-emerald-900/30 p-3 rounded-xl flex flex-col items-center justify-center gap-1 text-[10px] text-emerald-400 hover:bg-emerald-900/50 transition-all"><i data-lucide="file-text" class="w-5 h-5"></i>ไฟล์รายงาน</a>`
+                            : `<img src="${f.url||f.d}" onclick="openLightbox(${localReportImgIdx + fi})" class="rounded-xl w-full aspect-square object-cover cursor-pointer border border-emerald-500/20 hover:scale-105 transition-all hover:border-emerald-400">`
                         ).join('')}
                     </div>
                 </div>`;
@@ -780,34 +804,34 @@
             const folder = zip.folder(`PEA_${currentPresDate}`);
 
             let imgCount = 0, pdfCount = 0;
+            const fetchPromises = [];
             dayTasks.forEach((t, ti) => {
                 const leader = getLeader(t.teamId);
                 const prefix = `${String(ti+1).padStart(2,'0')}_${leader}`;
 
-                parseFiles(t.files_v2).forEach((f, fi) => {
-                    if (f.t === 'img') {
+                const addFile = (f, label, fi) => {
+                    const ext = f.t === 'pdf' ? 'pdf' : 'jpg';
+                    const fname = `${prefix}_${label}_${fi+1}.${ext}`;
+                    if (f.url) {
+                        // New format: fetch from Storage URL
+                        fetchPromises.push(
+                            fetch(f.url).then(r => r.blob()).then(blob => {
+                                folder.file(fname, blob);
+                                imgCount++;
+                            }).catch(() => {})
+                        );
+                    } else if (f.d) {
+                        // Legacy base64
                         const base64 = f.d.split(',')[1];
-                        folder.file(`${prefix}_สั่งงาน_${fi+1}.jpg`, base64, { base64: true });
+                        folder.file(fname, base64, { base64: true });
                         imgCount++;
-                    } else if (f.t === 'pdf') {
-                        const base64 = f.d.split(',')[1];
-                        folder.file(`${prefix}_สั่งงาน_${fi+1}.pdf`, base64, { base64: true });
-                        pdfCount++;
                     }
-                });
+                };
 
-                parseFiles(t.reportFiles_v2).forEach((f, fi) => {
-                    if (f.t === 'img') {
-                        const base64 = f.d.split(',')[1];
-                        folder.file(`${prefix}_รายงาน_${fi+1}.jpg`, base64, { base64: true });
-                        imgCount++;
-                    } else if (f.t === 'pdf') {
-                        const base64 = f.d.split(',')[1];
-                        folder.file(`${prefix}_รายงาน_${fi+1}.pdf`, base64, { base64: true });
-                        pdfCount++;
-                    }
-                });
+                parseFiles(t.files_v2).forEach((f, fi) => addFile(f, 'สั่งงาน', fi));
+                parseFiles(t.reportFiles_v2).forEach((f, fi) => addFile(f, 'รายงาน', fi));
             });
+            await Promise.all(fetchPromises);
 
             if (imgCount + pdfCount === 0) {
                 alert("ไม่มีไฟล์ในวันนี้");
@@ -845,7 +869,17 @@
             bL.className = v==='list' ? 'px-5 py-2 rounded-xl text-sm font-bold transition-all bg-slate-900 text-white shadow-md' : 'px-5 py-2 rounded-xl text-sm font-bold transition-all text-slate-500';
         };
         window.moveMonth = d => { currentMonth.setMonth(currentMonth.getMonth()+d); renderContent(); };
-        window.handleDeleteTask = async id => { if (confirm("ลบภารกิจนี้?")) await deleteDoc(doc(db, 'tasks', id)); };
+        window.handleDeleteTask = async (id) => {
+            if (!confirm("ลบภารกิจนี้?")) return;
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                const allFiles = [...parseFiles(task.files_v2), ...parseFiles(task.reportFiles_v2)];
+                for (const f of allFiles) {
+                    if (f.path) await deleteObject(sRef(storage, f.path)).catch(() => {});
+                }
+            }
+            await deleteDoc(doc(db, 'tasks', id));
+        };
         window.closePresMode = () => document.getElementById('pres-mode').classList.remove('active');
 
         // --- Task Popup ---
