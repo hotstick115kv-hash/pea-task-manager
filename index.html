@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Sarabun', sans-serif; background-color: #f1f5f9; color: #1e293b; margin: 0; }
@@ -100,6 +101,15 @@
             .pres-icon-btn { display: flex !important; width: 15px; height: 15px; }
             .pres-icon-btn svg { width: 8px; height: 8px; }
         }
+
+        /* File Viewer Modal */
+        #fileModal .modal-content { max-width:800px; }
+        .file-grid-item { position:relative; border-radius:10px; overflow:hidden; cursor:pointer; aspect-ratio:1/1; background:#f8fafc; border:1px solid #e2e8f0; }
+        .file-grid-item img { width:100%; height:100%; object-fit:cover; transition:transform 0.2s; }
+        .file-grid-item:hover img { transform:scale(1.05); }
+        .file-grid-item .file-label { position:absolute; bottom:0; left:0; right:0; background:linear-gradient(transparent,rgba(0,0,0,0.5)); color:white; font-size:9px; padding:6px 4px 3px; font-weight:700; }
+        .file-tag { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:20px; font-size:10px; font-weight:700; }
+
         /* Landscape phone */
         @media (max-height: 500px) and (orientation: landscape) {
             /* Nav: shrink tight */
@@ -215,9 +225,11 @@
                 <button onclick="setView('calendar')" id="btn-calendar" class="px-5 py-2 rounded-xl text-sm font-bold transition-all bg-slate-900 text-white shadow-md">ปฏิทิน</button>
                 <button onclick="setView('list')" id="btn-list" class="px-5 py-2 rounded-xl text-sm font-bold transition-all text-slate-500">รายการ</button>
             </div>
-            <div class="relative w-full sm:w-72">
-                <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-3 text-slate-400"></i>
-                <input type="text" id="search" oninput="renderContent()" placeholder="ค้นหาภารกิจ..." class="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm w-full outline-none focus:ring-2 focus:ring-purple-100">
+                <div class="relative w-full sm:w-72">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-3 text-slate-400"></i>
+                    <input type="text" id="search" oninput="renderContent()" placeholder="ค้นหาภารกิจ..." class="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm w-full outline-none focus:ring-2 focus:ring-purple-100">
+                </div>
+
             </div>
         </div>
 
@@ -283,6 +295,7 @@
                 </table>
             </div>
         </div>
+
     </main>
 
     <!-- Presentation Mode -->
@@ -459,16 +472,49 @@
         };
 
         const init = async () => {
+            // Show error helper
+            const showError = (msg) => {
+                const el = document.getElementById('loading');
+                el.innerHTML = `<div style="text-align:center;padding:2rem;max-width:360px">
+                    <div style="font-size:48px;margin-bottom:16px">⚠️</div>
+                    <p style="font-weight:900;font-size:18px;color:#1e293b;margin-bottom:8px">ไม่สามารถเชื่อมต่อได้</p>
+                    <p style="font-size:13px;color:#64748b;margin-bottom:20px">${msg}</p>
+                    <p style="font-size:12px;background:#f1f5f9;padding:12px;border-radius:10px;color:#475569;text-align:left;line-height:1.8">
+                        <strong>วิธีแก้ไข:</strong><br>
+                        1. ต้องเปิดผ่าน <strong>Web Server</strong> (ไม่ใช่ไฟล์โดยตรง)<br>
+                        2. อัปโหลดขึ้น <strong>Firebase Hosting</strong><br>
+                        3. หรือใช้ VS Code + Extension <strong>Live Server</strong>
+                    </p>
+                    <button onclick="location.reload()" style="margin-top:16px;background:#7c3aed;color:white;border:none;padding:10px 24px;border-radius:12px;font-weight:700;cursor:pointer;font-size:14px">ลองใหม่</button>
+                </div>`;
+            };
+
             try {
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app); db = getFirestore(app); storage = getStorage(app);
-                await signInAnonymously(auth);
+
+                // Timeout 10s
+                const authPromise = signInAnonymously(auth);
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('timeout')), 10000)
+                );
+                await Promise.race([authPromise, timeoutPromise]);
+
                 onAuthStateChanged(auth, user => {
                     if (user) { document.getElementById('loading').style.display = 'none'; startSync(); }
                 });
                 document.getElementById('field-team').innerHTML = `<option value="">เลือกสายงาน...</option>` + TEAMS.map(t => `<option value="${t.id}">${t.id}: ${t.name}</option>`).join('');
                 lucide.createIcons();
-            } catch(err) { console.error(err); }
+            } catch(err) {
+                console.error('Init error:', err);
+                if (err.message === 'timeout') {
+                    showError('การเชื่อมต่อหมดเวลา — กรุณาตรวจสอบอินเทอร์เน็ต และเปิดผ่าน Web Server');
+                } else if (err.code === 'auth/network-request-failed' || err.message?.includes('network')) {
+                    showError('ไม่มีการเชื่อมต่ออินเทอร์เน็ต หรือเปิดไฟล์โดยตรง (file://)');
+                } else {
+                    showError(`เกิดข้อผิดพลาด: ${err.message || err.code || 'unknown'}`);
+                }
+            }
         };
 
         const startSync = () => {
@@ -864,9 +910,12 @@
             activeView = v; renderContent();
             document.getElementById('view-calendar').classList.toggle('hidden', v !== 'calendar');
             document.getElementById('view-list').classList.toggle('hidden', v !== 'list');
-            const bC = document.getElementById('btn-calendar'), bL = document.getElementById('btn-list');
-            bC.className = v==='calendar' ? 'px-5 py-2 rounded-xl text-sm font-bold transition-all bg-slate-900 text-white shadow-md' : 'px-5 py-2 rounded-xl text-sm font-bold transition-all text-slate-500';
-            bL.className = v==='list' ? 'px-5 py-2 rounded-xl text-sm font-bold transition-all bg-slate-900 text-white shadow-md' : 'px-5 py-2 rounded-xl text-sm font-bold transition-all text-slate-500';
+
+            const ON = 'px-5 py-2 rounded-xl text-sm font-bold transition-all bg-slate-900 text-white shadow-md';
+            const OFF = 'px-5 py-2 rounded-xl text-sm font-bold transition-all text-slate-500';
+            document.getElementById('btn-calendar').className = v==='calendar' ? ON : OFF;
+            document.getElementById('btn-list').className = v==='list' ? ON : OFF;
+
         };
         window.moveMonth = d => { currentMonth.setMonth(currentMonth.getMonth()+d); renderContent(); };
         window.handleDeleteTask = async (id) => {
@@ -891,6 +940,8 @@
             popupTaskId = id;
             document.getElementById('popup-leader').innerText = task.teamId + ' · ' + getLeader(task.teamId);
             document.getElementById('popup-title').innerText = task.title;
+            const allF = [...parseFiles(task.files_v2), ...parseFiles(task.reportFiles_v2)];
+            document.getElementById('popup-btn-files').style.display = allF.length > 0 ? 'flex' : 'none';
             const popup = document.getElementById('task-popup');
             const overlay = document.getElementById('popup-overlay');
             popup.classList.add('visible');
@@ -924,6 +975,7 @@
             if (action === 'edit') openEditTaskModal(tid);
             else if (action === 'report') openReportModal(tid);
             else if (action === 'delete') handleDeleteTask(tid);
+            else if (action === 'files') openFileModal(tid);
         };
 
         // Close popup on outside click (desktop)
@@ -934,8 +986,80 @@
             }
         });
 
-        init();
+        // ── File Viewer Modal ──────────────────────────────────────────
+        window.openFileModal = (id) => {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+            document.getElementById('fm-team').innerText = task.teamId + ' · ' + getLeader(task.teamId);
+            document.getElementById('fm-title').innerText = task.title;
+            const taskF = parseFiles(task.files_v2);
+            const reportF = parseFiles(task.reportFiles_v2);
+            const body = document.getElementById('fm-body');
+
+            const renderSection = (files, label, color) => {
+                if (!files.length) return '';
+                const imgs = files.filter(f => f.t === 'img');
+                const pdfs = files.filter(f => f.t === 'pdf');
+                // build lightbox list for this section
+                const imgUrls = imgs.map(f => f.url || f.d);
+                return `<div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="file-tag ${color}">${label}</span>
+                        <span class="text-[10px] text-slate-400 font-bold">${files.length} ไฟล์</span>
+                    </div>
+                    <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                        ${imgs.map((f, fi) => `
+                            <div class="file-grid-item" onclick="fmLightbox(${fi}, ${JSON.stringify(imgUrls)})">
+                                <img src="${f.url || f.d}" loading="lazy">
+                                <div class="file-label">รูป ${fi+1}</div>
+                            </div>`).join('')}
+                        ${pdfs.map(f => `
+                            <a href="${f.url || f.d}" target="_blank" download="${f.n}"
+                               class="file-grid-item flex flex-col items-center justify-center gap-2 no-underline hover:bg-rose-50 transition-all">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                <span style="font-size:9px;font-weight:800;color:#ef4444;text-align:center;padding:0 4px;word-break:break-all;">${f.n || 'PDF'}</span>
+                            </a>`).join('')}
+                    </div>
+                </div>`;
+            };
+
+            body.innerHTML = `
+                <div class="flex gap-3 flex-wrap mb-1">
+                    <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${task.status==='done'?'bg-emerald-100 text-emerald-700':task.status==='progress'?'bg-blue-100 text-blue-700':'bg-amber-100 text-amber-700'}">
+                        ${task.status==='done'?'สำเร็จ':task.status==='progress'?'กำลังทำ':'รอดำเนินการ'}
+                    </span>
+                    <span class="text-xs text-slate-400 font-bold flex items-center gap-1">📅 ${task.date}</span>
+                </div>
+                ${task.reportNote ? `<div class="bg-emerald-50 border-l-4 border-emerald-500 p-3 rounded-xl text-sm text-emerald-800 italic">"${task.reportNote}"</div>` : ''}
+                ${renderSection(taskF, '📋 ไฟล์สั่งงาน', 'bg-purple-100 text-purple-700')}
+                ${renderSection(reportF, '✅ ไฟล์รายงาน', 'bg-emerald-100 text-emerald-700')}
+                ${!taskF.length && !reportF.length ? '<p class="text-center text-slate-400 py-6 italic">ไม่มีไฟล์แนบ</p>' : ''}`;
+            openModal('fileModal');
+        };
+
+        // Mini lightbox for file modal (reuses global lbImages + openLightbox)
+        window.fmLightbox = (startIdx, imgUrls) => {
+            lbImages = imgUrls;
+            openLightbox(startIdx);
+        };
+
+
+                init();
     </script>
+    <!-- File Viewer Modal -->
+    <div id="fileModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="p-5 border-b flex justify-between items-center bg-slate-50">
+                <div>
+                    <div id="fm-team" class="text-[10px] font-black text-purple-600 uppercase mb-0.5"></div>
+                    <h3 id="fm-title" class="text-lg font-black text-slate-800"></h3>
+                </div>
+                <button onclick="closeModal('fileModal')" class="p-2 hover:bg-slate-200 rounded-full"><i data-lucide="x"></i></button>
+            </div>
+            <div class="p-5 space-y-5" id="fm-body"></div>
+        </div>
+    </div>
+
     <!-- Task Action Popup -->
     <div id="popup-overlay" onclick="closeTaskPopup()"></div>
     <div id="task-popup" class="task-popup">
@@ -943,6 +1067,10 @@
             <div class="task-popup-leader" id="popup-leader"></div>
             <div class="task-popup-title" id="popup-title"></div>
         </div>
+        <button class="task-popup-btn" id="popup-btn-files" onclick="popupAction('files')" style="color:#7c3aed;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            ดูไฟล์แนบ
+        </button>
         <button class="task-popup-btn report" onclick="popupAction('report')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
             รายงานผล
