@@ -43,6 +43,18 @@
         .task-chip-progress { background: #eff6ff; color: #1e40af; border-left-color: #3b82f6; }
         .task-chip-done { background: #f0fdf4; color: #166534; border-left-color: #10b981; }
         .more-tasks { font-size: 8px; color: #7c3aed; font-weight: 800; text-align: center; cursor: pointer; padding: 1px; background: #f5f3ff; border-radius: 4px; }
+
+        /* Notepad */
+        .note-card { background:white; border-radius:16px; border:1px solid #e2e8f0; padding:1rem; box-shadow:0 2px 8px rgba(0,0,0,0.05); cursor:pointer; transition:all 0.2s; position:relative; }
+        .note-card:hover { box-shadow:0 4px 16px rgba(124,58,237,0.12); border-color:#ddd6fe; transform:translateY(-1px); }
+        .note-card .note-color-bar { position:absolute; top:0; left:0; width:4px; height:100%; border-radius:16px 0 0 16px; }
+        .note-card .note-title { font-weight:800; font-size:14px; color:#1e293b; margin-bottom:4px; }
+        .note-card .note-body { font-size:12px; color:#64748b; line-height:1.5; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+        .note-card .note-date { font-size:10px; color:#94a3b8; font-weight:700; margin-top:8px; }
+        .note-pin { position:absolute; top:10px; right:10px; color:#f59e0b; font-size:14px; }
+        #note-editor { width:100%; border:none; outline:none; resize:none; font-family:'Sarabun',sans-serif; font-size:15px; line-height:1.7; color:#1e293b; background:transparent; min-height:200px; }
+        .color-dot { width:22px; height:22px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:all 0.15s; flex-shrink:0; }
+        .color-dot.active { border-color:#1e293b; transform:scale(1.15); }
         .holiday-chip { padding: 2px 5px; border-radius: 4px; font-size: 8px; font-weight: 800; background: #fee2e2; color: #991b1b; border-left: 3px solid #ef4444; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .calendar-cell.is-holiday { background: #fff5f5; }
         .calendar-cell.is-holiday .date-num { color: #ef4444; }
@@ -245,6 +257,7 @@
             <div class="bg-white p-1 rounded-2xl border border-slate-200 flex shadow-sm">
                 <button onclick="setView('calendar')" id="btn-calendar" class="px-5 py-2 rounded-xl text-sm font-bold transition-all bg-slate-900 text-white shadow-md">ปฏิทิน</button>
                 <button onclick="setView('list')" id="btn-list" class="px-5 py-2 rounded-xl text-sm font-bold transition-all text-slate-500">รายการ</button>
+                <button onclick="setView('notepad')" id="btn-notepad" class="px-5 py-2 rounded-xl text-sm font-bold transition-all text-slate-500">📝 Notepad</button>
             </div>
                 <div class="flex gap-2 w-full sm:w-auto items-center">
                 <div class="relative flex-1 sm:w-64">
@@ -332,6 +345,29 @@
             </div>
         </div>
 
+        <!-- Notepad View -->
+        <div id="view-notepad" class="hidden">
+            <div class="flex justify-between items-center mb-5">
+                <div>
+                    <h2 class="text-xl font-black text-slate-800">📝 Notepad</h2>
+                    <p class="text-xs text-slate-400 mt-0.5">บันทึกงาน ไอเดีย และข้อความสำคัญ</p>
+                </div>
+                <button onclick="openNoteModal()" class="brand-primary text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-purple-200 hover:scale-105 transition-all">
+                    <i data-lucide="plus" class="w-4 h-4"></i> เพิ่มโน้ต
+                </button>
+            </div>
+            <!-- Pin row + Grid -->
+            <div id="notes-pinned" class="mb-4 hidden">
+                <p class="text-[10px] font-black text-amber-500 uppercase mb-2">📌 ปักหมุด</p>
+                <div id="notes-pinned-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6"></div>
+            </div>
+            <div id="notes-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div>
+            <div id="notes-empty" class="hidden text-center py-20 text-slate-400">
+                <div class="text-5xl mb-3">📝</div>
+                <p class="font-bold">ยังไม่มีโน้ต</p>
+                <p class="text-sm">กด "เพิ่มโน้ต" เพื่อเริ่มต้น</p>
+            </div>
+        </div>
     </main>
 
     <!-- Presentation Mode -->
@@ -656,6 +692,7 @@
                 tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 renderContent();
             });
+            startNotesSync();
         };
 
         window.renderContent = () => {
@@ -1052,12 +1089,14 @@
             activeView = v; renderContent();
             document.getElementById('view-calendar').classList.toggle('hidden', v !== 'calendar');
             document.getElementById('view-list').classList.toggle('hidden', v !== 'list');
+            document.getElementById('view-notepad').classList.toggle('hidden', v !== 'notepad');
 
             const ON = 'px-5 py-2 rounded-xl text-sm font-bold transition-all bg-slate-900 text-white shadow-md';
             const OFF = 'px-5 py-2 rounded-xl text-sm font-bold transition-all text-slate-500';
             document.getElementById('btn-calendar').className = v==='calendar' ? ON : OFF;
             document.getElementById('btn-list').className = v==='list' ? ON : OFF;
-
+            document.getElementById('btn-notepad').className = v==='notepad' ? ON : OFF;
+            if (v === 'notepad') renderNotes();
         };
         window.moveMonth = d => { currentMonth.setMonth(currentMonth.getMonth()+d); renderContent(); };
         window.handleDeleteTask = async (id) => {
@@ -1157,7 +1196,7 @@
                     <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
                         ${imgs.map((f, fi) => `
                             <div class="file-grid-item" onclick="fmLightbox(${fi}, '${setKey}')">
-                                <img src="${f.url || f.d}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\'><rect fill=\'%23f1f5f9\' width=\'100\' height=\'100\'><text y=\'.9em\' font-size=\'16\'></text></rect></svg>'">
+                                <img src="${f.url || f.d}" loading="lazy" onerror="this.style.opacity='0.5'">
                                 <div class="file-label">รูป ${fi+1}</div>
                             </div>`).join('')}
                         ${pdfs.map(f => `
@@ -1394,6 +1433,109 @@
             w.document.close();
         };
 
+        // ════════════════════════════════════════════════════════
+        // NOTEPAD
+        // ════════════════════════════════════════════════════════
+        let notes = [];
+        let selectedNoteColor = '#7c3aed';
+
+        const startNotesSync = () => {
+            onSnapshot(collection(db, 'notes'), snap => {
+                notes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                if (activeView === 'notepad') renderNotes();
+            });
+        };
+
+        const renderNotes = () => {
+            const pinned = notes.filter(n => n.pinned).sort((a,b) => (b.updatedAt?.seconds||0)-(a.updatedAt?.seconds||0));
+            const unpinned = notes.filter(n => !n.pinned).sort((a,b) => (b.updatedAt?.seconds||0)-(a.updatedAt?.seconds||0));
+
+            const pinnedSection = document.getElementById('notes-pinned');
+            const pinnedGrid = document.getElementById('notes-pinned-grid');
+            const grid = document.getElementById('notes-grid');
+            const empty = document.getElementById('notes-empty');
+
+            pinnedSection.classList.toggle('hidden', pinned.length === 0);
+            pinnedGrid.innerHTML = pinned.map(n => noteCardHTML(n)).join('');
+            grid.innerHTML = unpinned.map(n => noteCardHTML(n)).join('');
+            empty.classList.toggle('hidden', notes.length > 0);
+            lucide.createIcons();
+        };
+
+        const noteCardHTML = (n) => {
+            const preview = (n.body || '').slice(0, 120);
+            const dt = n.updatedAt?.toDate?.()?.toLocaleDateString('th-TH', {day:'numeric',month:'short',year:'numeric'}) || '';
+            return `<div class="note-card" onclick="openNoteModal('${n.id}')">
+                <div class="note-color-bar" style="background:${n.color||'#7c3aed'}"></div>
+                ${n.pinned ? '<span class="note-pin">📌</span>' : ''}
+                <div class="note-title" style="padding-right:${n.pinned?'20px':'0'}">${n.title || 'ไม่มีหัวข้อ'}</div>
+                <div class="note-body">${(n.body||'').split('\\n').join('<br>')}</div>
+
+                <div class="note-date">${dt}</div>
+            </div>`;
+        };
+
+        window.selectNoteColor = (el) => {
+            document.querySelectorAll('#note-colors .color-dot').forEach(d => d.classList.remove('active'));
+            el.classList.add('active');
+            selectedNoteColor = el.dataset.color;
+        };
+
+        window.openNoteModal = (id) => {
+            const note = id ? notes.find(n => n.id === id) : null;
+            document.getElementById('note-id').value = note?.id || '';
+            document.getElementById('note-title').value = note?.title || '';
+            document.getElementById('note-editor').value = note?.body || '';
+            document.getElementById('note-pin').checked = note?.pinned || false;
+            document.getElementById('note-modal-title').innerText = note ? 'แก้ไขโน้ต' : 'เพิ่มโน้ต';
+            document.getElementById('note-delete-btn').classList.toggle('hidden', !note);
+
+            // Set color
+            selectedNoteColor = note?.color || '#7c3aed';
+            document.querySelectorAll('#note-colors .color-dot').forEach(d => {
+                d.classList.toggle('active', d.dataset.color === selectedNoteColor);
+            });
+            document.getElementById('note-modal-header').style.borderBottom = `3px solid ${selectedNoteColor}`;
+
+            openModal('noteModal');
+            setTimeout(() => document.getElementById('note-editor').focus(), 100);
+        };
+
+        window.saveNote = async () => {
+            const id = document.getElementById('note-id').value;
+            const data = {
+                title: document.getElementById('note-title').value.trim(),
+                body: document.getElementById('note-editor').value,
+                color: selectedNoteColor,
+                pinned: document.getElementById('note-pin').checked,
+                updatedAt: serverTimestamp(),
+            };
+            if (!data.body && !data.title) { alert('กรุณาเขียนโน้ตก่อน'); return; }
+            if (id) {
+                await updateDoc(doc(db, 'notes', id), data);
+            } else {
+                data.createdAt = serverTimestamp();
+                await addDoc(collection(db, 'notes'), data);
+            }
+            closeModal('noteModal');
+        };
+
+        window.deleteNote = async () => {
+            const id = document.getElementById('note-id').value;
+            if (!id) return;
+            if (!confirm('ลบโน้ตนี้?')) return;
+            await deleteDoc(doc(db, 'notes', id));
+            closeModal('noteModal');
+        };
+
+        // Update note header border when color changes
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#note-colors')) {
+                const color = e.target.closest('.color-dot')?.dataset.color;
+                if (color) document.getElementById('note-modal-header').style.borderBottom = `3px solid ${color}`;
+            }
+        });
+
         init();
     </script>
     <!-- File Viewer Modal -->
@@ -1407,6 +1549,46 @@
                 <button onclick="closeModal('fileModal')" class="p-2 hover:bg-slate-200 rounded-full"><i data-lucide="x"></i></button>
             </div>
             <div class="p-5 space-y-5" id="fm-body"></div>
+        </div>
+    </div>
+
+    <!-- Note Modal -->
+    <div id="noteModal" class="modal-overlay">
+        <div class="modal-content" style="max-width:560px;">
+            <div class="p-5 border-b flex justify-between items-center" id="note-modal-header" style="background:#faf5ff;">
+                <div class="flex items-center gap-3">
+                    <span class="text-xl">📝</span>
+                    <h3 id="note-modal-title" class="text-lg font-black text-slate-800">เพิ่มโน้ต</h3>
+                </div>
+                <button onclick="closeModal('noteModal')" class="p-2 hover:bg-purple-100 rounded-full text-slate-600"><i data-lucide="x"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <input type="hidden" id="note-id">
+                <input type="text" id="note-title" placeholder="หัวข้อ (ไม่บังคับ)" class="form-input font-bold text-slate-800" style="font-size:15px;">
+                <textarea id="note-editor" placeholder="เขียนโน้ต..." class="form-input" style="min-height:180px;font-size:14px;line-height:1.7;resize:vertical;"></textarea>
+                <!-- Color picker -->
+                <div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase mb-2">สีโน้ต</p>
+                    <div class="flex gap-2 flex-wrap" id="note-colors">
+                        <div class="color-dot active" data-color="#7c3aed" style="background:#7c3aed;" onclick="selectNoteColor(this)"></div>
+                        <div class="color-dot" data-color="#3b82f6" style="background:#3b82f6;" onclick="selectNoteColor(this)"></div>
+                        <div class="color-dot" data-color="#10b981" style="background:#10b981;" onclick="selectNoteColor(this)"></div>
+                        <div class="color-dot" data-color="#f59e0b" style="background:#f59e0b;" onclick="selectNoteColor(this)"></div>
+                        <div class="color-dot" data-color="#ef4444" style="background:#ef4444;" onclick="selectNoteColor(this)"></div>
+                        <div class="color-dot" data-color="#64748b" style="background:#64748b;" onclick="selectNoteColor(this)"></div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" id="note-pin" class="w-4 h-4 accent-amber-400">
+                        <span class="text-sm font-bold text-slate-600">📌 ปักหมุด</span>
+                    </label>
+                </div>
+                <div class="flex gap-3 pt-1">
+                    <button onclick="saveNote()" class="flex-1 py-3 brand-primary text-white rounded-2xl font-bold">บันทึก</button>
+                    <button id="note-delete-btn" onclick="deleteNote()" class="hidden py-3 px-5 bg-rose-50 text-rose-600 border border-rose-200 rounded-2xl font-bold hover:bg-rose-600 hover:text-white transition-all">ลบ</button>
+                </div>
+            </div>
         </div>
     </div>
 
