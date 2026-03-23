@@ -911,8 +911,20 @@
             }
         };
 
+        // Calendar render cache — skip if month + task fingerprint unchanged
+        let _calCache = { key: '', month: '' };
+
         const renderCalendar = (data) => {
             const y = currentMonth.getFullYear(), m = currentMonth.getMonth();
+            const monthKey = `${y}-${m}`;
+            // Fingerprint: task ids + statuses for current month
+            const mm = String(m+1).padStart(2,'0');
+            const monthPrefix = `${y}-${mm}`;
+            const monthData = data.filter(t => t.date.startsWith(monthPrefix));
+            const fp = monthData.map(t => t.id + t.status).join(',');
+            const cacheKey = monthKey + '|' + fp;
+            if (cacheKey === _calCache.key) return; // Nothing changed
+            _calCache.key = cacheKey;
             document.getElementById('month-label').innerText = `${TH_MONTHS[m]} ${y+543}`;
             const body = document.getElementById('calendar-body');
 
@@ -926,7 +938,6 @@
             const first = new Date(y, m, 1).getDay(), last = new Date(y, m+1, 0).getDate();
             const todayStr = new Date().toISOString().slice(0,10);
             const frag = document.createDocumentFragment();
-            const mm = String(m+1).padStart(2,'0');
 
             // Empty cells
             for (let i = 0; i < first; i++) {
@@ -980,7 +991,7 @@
             }
 
             body.replaceChildren(frag);
-            lucide.createIcons();
+            // No lucide.createIcons() here — pres button uses inline SVG directly
         };
 
         window.toggleDateSort = () => { listSortDir = listSortDir === 'desc' ? 'asc' : 'desc'; renderContent(); };
@@ -1040,18 +1051,17 @@
                     <td class="px-6 py-4">
                         <div class="flex gap-2 flex-wrap justify-end">
                             <button onclick="openEditTaskModal('${t.id}')" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-black hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all">
-                                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> แก้ไข
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> แก้ไข
                             </button>
                             <button onclick="openReportModal('${t.id}')" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-black hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all">
-                                <i data-lucide="clipboard-check" class="w-3.5 h-3.5"></i> รายงานผล
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> รายงานผล
                             </button>
                             <button onclick="handleDeleteTask('${t.id}')" class="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-xs font-black hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all">
-                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> ลบ
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg> ลบ
                             </button>
                         </div>
                     </td>
                 </tr>`).join('') || `<tr><td colspan="5" class="py-16 text-center text-slate-400 italic">ไม่พบข้อมูลที่ค้นหา</td></tr>`;
-            lucide.createIcons();
         };
 
         window.openEditTaskModal = (id) => {
@@ -1080,14 +1090,15 @@
 
         const renderFilePreviews = (files, containerId, fieldName, taskId) => {
             const container = document.getElementById(containerId);
+            const trashSVG = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>`;
+            const pdfSVG = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
             container.innerHTML = files.map(f => `
                 <div class="photo-thumbnail-container">
                     ${f.t === 'pdf'
-                        ? `<div class="bg-rose-50 rounded-lg aspect-square flex flex-col items-center justify-center border border-rose-200"><i data-lucide="file-text" class="text-rose-500"></i><span class="text-[8px] font-bold truncate px-1">${f.n||'PDF'}</span></div>`
+                        ? `<div class="bg-rose-50 rounded-lg aspect-square flex flex-col items-center justify-center border border-rose-200">${pdfSVG}<span class="text-[8px] font-bold truncate px-1">${f.n||'PDF'}</span></div>`
                         : `<img src="${fileUrl(f)}" class="photo-thumbnail">`}
-                    <button type="button" onclick="deleteSpecificFile('${taskId}','${fieldName}','${f.id}')" class="delete-btn-abs"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                    <button type="button" onclick="deleteSpecificFile('${taskId}','${fieldName}','${f.id}')" class="delete-btn-abs">${trashSVG}</button>
                 </div>`).join('');
-            lucide.createIcons();
         };
 
         window.deleteSpecificFile = async (taskId, fieldName, fileId) => {
@@ -1337,7 +1348,7 @@
             if (v === 'notepad') renderNotes();
             if (v === 'dashboard') renderDashboard();
         };
-        window.moveMonth = d => { currentMonth.setMonth(currentMonth.getMonth()+d); renderContent(); };
+        window.moveMonth = d => { currentMonth.setMonth(currentMonth.getMonth()+d); _calCache.key = ''; renderContent(); };
         window.handleDeleteTask = async (id) => {
             if (!confirm("ลบภารกิจนี้?")) return;
             const task = tasks.find(t => t.id === id);
@@ -1465,27 +1476,32 @@
 
         window.shareVia = async (method) => {
             if (!_shareTask) return;
+            // text already contains the link at the bottom (buildShareText includes it)
             const text = buildShareText(_shareTask, true);
-            const enc = encodeURIComponent(text);
+            const enc  = encodeURIComponent(text);
             const link = buildDeepLink(_shareTask);
 
             if (method === 'native') {
                 if (navigator.share) {
-                    try { await navigator.share({ title: 'PEA Task: ' + _shareTask.title, text, url: link }); }
-                    catch(e) { if (e.name !== 'AbortError') console.warn(e); }
+                    try {
+                        // Pass url separately so apps that support rich-sharing show it nicely
+                        await navigator.share({ title: '⚡ PEA: ' + _shareTask.title, text });
+                    } catch(e) { if (e.name !== 'AbortError') console.warn(e); }
                 }
             } else if (method === 'copy') {
+                // Copy full text (which already contains the link)
                 try { await navigator.clipboard.writeText(text); }
                 catch { const ta = document.getElementById('share-text-preview'); ta.select(); document.execCommand('copy'); }
                 const status = document.getElementById('share-copy-status');
                 status.classList.remove('hidden');
                 setTimeout(() => status.classList.add('hidden'), 2500);
             } else if (method === 'line') {
+                // LINE: text already has link embedded
                 window.open('https://line.me/R/msg/text/?' + enc, '_blank');
             } else if (method === 'whatsapp') {
                 window.open('https://wa.me/?text=' + enc, '_blank');
             } else if (method === 'email') {
-                const subject = encodeURIComponent('ภารกิจ PEA: ' + _shareTask.title);
+                const subject = encodeURIComponent('⚡ ภารกิจ PEA: ' + _shareTask.title);
                 window.open(`mailto:?subject=${subject}&body=${enc}`, '_blank');
             } else if (method === 'sms') {
                 window.open('sms:?body=' + enc, '_blank');
