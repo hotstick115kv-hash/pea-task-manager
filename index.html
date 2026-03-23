@@ -435,10 +435,10 @@
                 <!-- Browser Notification Settings -->
                 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                     <div class="flex items-center gap-2 mb-1">
-                        <h3 class="font-black text-slate-800 text-sm">🔔 การแจ้งเตือนในเบราว์เซอร์</h3>
+                        <h3 class="font-black text-slate-800 text-sm">🔔 การแจ้งเตือนอัตโนมัติ</h3>
                         <span id="notif-badge" class="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full text-[9px] font-black">ยังไม่เปิด</span>
                     </div>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase mb-4">แจ้งเตือนอัตโนมัติ ไม่ต้องตั้งค่าเพิ่ม</p>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase mb-4">แจ้งเตือนทุกครั้งที่เปิดแอป — ไม่ต้องตั้งค่า</p>
 
                     <!-- PIN Gate -->
                     <div id="notif-pin-gate" class="space-y-3">
@@ -462,7 +462,7 @@
                             <span class="text-2xl">🔔</span>
                             <div class="flex-1">
                                 <div class="text-sm font-bold text-purple-800">เปิดรับการแจ้งเตือน</div>
-                                <div class="text-[11px] text-purple-500">กดปุ่มเพื่ออนุญาตให้เบราว์เซอร์แจ้งเตือน</div>
+                                <div class="text-[11px] text-purple-500">กดเพื่ออนุญาตให้เบราว์เซอร์แจ้งเตือนอัตโนมัติ</div>
                             </div>
                             <button onclick="requestNotifPermission()" class="px-3 py-2 bg-purple-600 text-white rounded-xl text-xs font-black hover:bg-purple-700 transition-all whitespace-nowrap">เปิดใช้งาน</button>
                         </div>
@@ -470,36 +470,35 @@
                             <span class="text-2xl">✅</span>
                             <div>
                                 <div class="text-sm font-bold text-green-800">เปิดรับการแจ้งเตือนแล้ว</div>
-                                <div class="text-[11px] text-green-600">ระบบจะแจ้งเตือนผ่านเบราว์เซอร์ได้เลย</div>
+                                <div class="text-[11px] text-green-600">ระบบจะแจ้งเตือนอัตโนมัติทุกครั้งที่เปิดแอป</div>
                             </div>
                         </div>
-                        <!-- Settings -->
-                        <div class="space-y-2.5 pt-2 border-t border-slate-100">
-                            <label class="flex items-center justify-between cursor-pointer">
-                                <div>
-                                    <div class="text-sm font-bold text-slate-700">แจ้งเตือนงานพรุ่งนี้</div>
-                                    <div class="text-[11px] text-slate-400">เตือนเมื่อเปิดแอปวันนั้น</div>
-                                </div>
-                                <input type="checkbox" id="notify-tomorrow" class="w-5 h-5 accent-purple-600" onchange="saveNotifySettings()">
-                            </label>
-                            <label class="flex items-center justify-between cursor-pointer">
-                                <div>
-                                    <div class="text-sm font-bold text-slate-700">สรุปงานทุกวันจันทร์</div>
-                                    <div class="text-[11px] text-slate-400">แจ้งเตือนเมื่อเปิดแอปวันจันทร์</div>
-                                </div>
-                                <input type="checkbox" id="notify-weekly" class="w-5 h-5 accent-purple-600" onchange="saveNotifySettings()">
-                            </label>
+                        <!-- Auto schedule info -->
+                        <div class="bg-slate-50 rounded-xl p-3 space-y-2 border border-slate-100">
+                            <div class="text-[10px] font-black text-slate-400 uppercase mb-1">ตารางแจ้งเตือนอัตโนมัติ</div>
+                            <div class="flex items-start gap-2 text-xs text-slate-600">
+                                <span class="text-base leading-none">📅</span>
+                                <div><span class="font-black">รายวัน</span> — แจ้งงานวันนี้ + งานค้างเกินกำหนด ทุกครั้งที่เปิดแอป</div>
+                            </div>
+                            <div class="flex items-start gap-2 text-xs text-slate-600">
+                                <span class="text-base leading-none">📊</span>
+                                <div><span class="font-black">วันจันทร์</span> — สรุปงานทั้งหมด สถานะ และ % ความสำเร็จ</div>
+                            </div>
+                            <div class="flex items-start gap-2 text-xs text-slate-600">
+                                <span class="text-base leading-none">⚠️</span>
+                                <div><span class="font-black">งานค้าง</span> — แจ้งเตือนงานที่เกินกำหนดและยังไม่เสร็จ</div>
+                            </div>
                         </div>
-                        <!-- Action buttons -->
+                        <!-- Manual trigger buttons -->
                         <div class="flex gap-2 pt-1">
                             <button onclick="sendBrowserNotif('test')" class="flex-1 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-black hover:bg-slate-200 transition-all">🧪 ทดสอบ</button>
                             <button onclick="sendBrowserNotif('weekly')" class="flex-1 py-2 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl text-xs font-black hover:bg-purple-600 hover:text-white transition-all">📊 สรุปงาน</button>
-                            <button onclick="sendBrowserNotif('tomorrow')" class="flex-1 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl text-xs font-black hover:bg-blue-600 hover:text-white transition-all">📅 งานพรุ่งนี้</button>
+                            <button onclick="sendBrowserNotif('today')" class="flex-1 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl text-xs font-black hover:bg-blue-600 hover:text-white transition-all">📅 งานวันนี้</button>
                         </div>
+                        <!-- Hidden checkboxes kept for saveNotifySettings compat -->
+                        <input type="checkbox" id="notify-tomorrow" class="hidden" checked>
+                        <input type="checkbox" id="notify-weekly" class="hidden" checked>
                         <div id="notif-status" class="hidden text-xs text-center py-2 rounded-xl font-bold"></div>
-                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-[10px] text-slate-500 leading-relaxed">
-                            💡 ใช้งานได้ทันที ไม่ต้องตั้งค่า Token หรือ API — แจ้งเตือนตรงที่เบราว์เซอร์
-                        </div>
                         <button onclick="lockNotifPanel()" class="w-full py-2 text-slate-400 text-xs font-bold hover:text-rose-500 transition-all">🔒 ล็อกการตั้งค่า</button>
                     </div>
                 </div>
@@ -847,64 +846,139 @@
             }
         };
 
+        // ── Performance: debounce render via rAF ──────────────────
+        let _renderTimer = null;
+        const scheduleRender = () => {
+            if (_renderTimer) cancelAnimationFrame(_renderTimer);
+            _renderTimer = requestAnimationFrame(() => { _renderTimer = null; renderContent(); });
+        };
+
+        // Pre-built leader name cache
+        const _leaderCache = {};
+        const getLeaderCached = id => {
+            if (_leaderCache[id] === undefined) _leaderCache[id] = getLeader(id);
+            return _leaderCache[id];
+        };
+
         const startSync = () => {
             onSnapshot(collection(db, 'tasks'), snap => {
                 tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                renderContent();
+                scheduleRender();
+                // Auto-notify once after first data load
+                if (!window._notifFired) { window._notifFired = true; setTimeout(runAutoNotify, 800); }
             });
             startNotesSync();
         };
 
         window.renderContent = () => {
             const s = document.getElementById('search').value.toLowerCase();
-            const filtered = tasks.filter(t =>
+            const filtered = s ? tasks.filter(t =>
                 t.title.toLowerCase().includes(s) ||
-                getLeader(t.teamId).toLowerCase().includes(s) ||
+                getLeaderCached(t.teamId).toLowerCase().includes(s) ||
                 t.date.includes(s)
-            );
-            if (activeView === 'calendar') renderCalendar(filtered); else renderList(filtered);
+            ) : tasks;
+            if (activeView === 'calendar') renderCalendar(filtered);
+            else if (activeView === 'list') renderList(filtered);
             updateStats();
         };
 
+        // Stat cache — only update DOM when value changes
+        const _statCache = {};
         const updateStats = () => {
-            document.getElementById('count-total').innerText = tasks.length;
-            document.getElementById('count-pending').innerText = tasks.filter(t => t.status === 'pending').length;
-            document.getElementById('count-progress').innerText = tasks.filter(t => t.status === 'progress').length;
-            document.getElementById('count-done').innerText = tasks.filter(t => t.status === 'done').length;
+            let pending = 0, progress = 0, done = 0;
+            for (const t of tasks) {
+                if (t.status === 'pending') pending++;
+                else if (t.status === 'progress') progress++;
+                else if (t.status === 'done') done++;
+            }
+            const counts = { total: tasks.length, pending, progress, done };
+            for (const [k, v] of Object.entries(counts)) {
+                if (_statCache[k] !== v) {
+                    _statCache[k] = v;
+                    const el = document.getElementById('count-' + k);
+                    if (el) el.innerText = v;
+                }
+            }
+        };
+
+        // Pre-group tasks by date for O(1) calendar lookup
+        const _tasksByDate = {};
+        const rebuildTaskIndex = () => {
+            for (const k in _tasksByDate) delete _tasksByDate[k];
+            for (const t of tasks) {
+                if (!_tasksByDate[t.date]) _tasksByDate[t.date] = [];
+                _tasksByDate[t.date].push(t);
+            }
         };
 
         const renderCalendar = (data) => {
             const y = currentMonth.getFullYear(), m = currentMonth.getMonth();
             document.getElementById('month-label').innerText = `${TH_MONTHS[m]} ${y+543}`;
             const body = document.getElementById('calendar-body');
-            body.innerHTML = '';
+
+            // Rebuild date index from filtered data
+            const byDate = {};
+            for (const t of data) {
+                if (!byDate[t.date]) byDate[t.date] = [];
+                byDate[t.date].push(t);
+            }
+
             const first = new Date(y, m, 1).getDay(), last = new Date(y, m+1, 0).getDate();
             const todayStr = new Date().toISOString().slice(0,10);
+            const frag = document.createDocumentFragment();
+            const mm = String(m+1).padStart(2,'0');
 
-            for (let i = 0; i < first; i++) body.innerHTML += `<div class="calendar-cell empty"></div>`;
+            // Empty cells
+            for (let i = 0; i < first; i++) {
+                const el = document.createElement('div');
+                el.className = 'calendar-cell empty';
+                frag.appendChild(el);
+            }
 
             for (let d = 1; d <= last; d++) {
-                const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                const dayTasks = data.filter(t => t.date === dateStr);
+                const dateStr = `${y}-${mm}-${String(d).padStart(2,'0')}`;
+                const dayTasks = byDate[dateStr] || [];
                 const isToday = dateStr === todayStr;
                 const holiday = THAI_HOLIDAYS[dateStr] || null;
 
-                body.innerHTML += `
-                    <div class="calendar-cell${isToday ? ' today' : ''}${dayTasks.length > 0 ? ' has-tasks' : ''}${holiday ? ' is-holiday' : ''}">
-                        <button class="pres-icon-btn" onclick="openPresentationMode('${dateStr}')" title="นำเสนอวันนี้">
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-                        </button>
-                        <span class="date-num">${d}</span>
-                        <div style="display:flex;flex-direction:column;gap:2px;">
-                            ${holiday ? `<div class="holiday-chip" title="${holiday}">🎌 ${holiday}</div>` : ''}
-                            ${dayTasks.map(t => `
-                                <div class="task-chip task-chip-${t.status}" onclick="showTaskPopup(event,'${t.id}')">
-                                    <span class="chip-leader">${getLeader(t.teamId)}</span>
-                                    <span class="chip-title">${t.title}</span>
-                                </div>`).join('')}
-                        </div>
-                    </div>`;
+                const cell = document.createElement('div');
+                cell.className = `calendar-cell${isToday ? ' today' : ''}${dayTasks.length ? ' has-tasks' : ''}${holiday ? ' is-holiday' : ''}`;
+
+                const presBtn = document.createElement('button');
+                presBtn.className = 'pres-icon-btn';
+                presBtn.title = 'นำเสนอวันนี้';
+                presBtn.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>`;
+                presBtn.addEventListener('click', () => openPresentationMode(dateStr));
+
+                const dateNum = document.createElement('span');
+                dateNum.className = 'date-num';
+                dateNum.textContent = d;
+
+                const inner = document.createElement('div');
+                inner.style.cssText = 'display:flex;flex-direction:column;gap:2px;';
+
+                if (holiday) {
+                    const hc = document.createElement('div');
+                    hc.className = 'holiday-chip';
+                    hc.title = holiday;
+                    hc.textContent = '🎌 ' + holiday;
+                    inner.appendChild(hc);
+                }
+                for (const t of dayTasks) {
+                    const chip = document.createElement('div');
+                    chip.className = `task-chip task-chip-${t.status}`;
+                    chip.addEventListener('click', e => showTaskPopup(e, t.id));
+                    chip.innerHTML = `<span class="chip-leader">${getLeaderCached(t.teamId)}</span><span class="chip-title">${t.title}</span>`;
+                    inner.appendChild(chip);
+                }
+
+                cell.appendChild(presBtn);
+                cell.appendChild(dateNum);
+                cell.appendChild(inner);
+                frag.appendChild(cell);
             }
+
+            body.replaceChildren(frag);
             lucide.createIcons();
         };
 
@@ -1950,21 +2024,20 @@
         // Build notification payload
         const buildNotifPayload = (type) => {
             const now = new Date();
+            const today = now.toISOString().slice(0,10);
             if (type === 'test') {
-                return { title: '⚡ PEA Task Manager', body: `🧪 ทดสอบการแจ้งเตือน\nระบบพร้อมใช้งาน ✅\n${now.toLocaleString('th-TH')}` };
-            } else if (type === 'tomorrow') {
-                const tom = new Date(now); tom.setDate(tom.getDate()+1);
-                const tStr = `${tom.getFullYear()}-${String(tom.getMonth()+1).padStart(2,'0')}-${String(tom.getDate()).padStart(2,'0')}`;
-                const tTasks = tasks.filter(t => t.date === tStr);
-                if (!tTasks.length) return null;
-                const preview = tTasks.slice(0,3).map((t,i) => `${i+1}. [${t.teamId}] ${t.title}`).join('\n');
-                return { title: `📅 งานพรุ่งนี้ มี ${tTasks.length} งาน`, body: preview + (tTasks.length > 3 ? `\n...และอีก ${tTasks.length-3} งาน` : '') };
+                return { title: '⚡ PEA Task Manager', body: `🧪 ระบบแจ้งเตือนพร้อมใช้งาน ✅\n${now.toLocaleString('th-TH')}` };
+            } else if (type === 'today') {
+                const todayTasks = tasks.filter(t => t.date === today);
+                if (!todayTasks.length) return { title: '📅 ไม่มีงานวันนี้', body: 'ไม่มีภารกิจที่กำหนดไว้วันนี้' };
+                const preview = todayTasks.slice(0,3).map((t,i) => `${i+1}. [${t.teamId}] ${t.title}`).join('\n');
+                return { title: `📅 งานวันนี้ มี ${todayTasks.length} งาน`, body: preview + (todayTasks.length > 3 ? `\n...และอีก ${todayTasks.length-3} งาน` : '') };
             } else if (type === 'weekly') {
                 const done = tasks.filter(t => t.status==='done').length;
                 const pend = tasks.filter(t => t.status==='pending').length;
                 const prog = tasks.filter(t => t.status==='progress').length;
                 const pct  = tasks.length > 0 ? Math.round(done/tasks.length*100) : 0;
-                return { title: `📊 สรุปงานประจำสัปดาห์ (${pct}% เสร็จ)`, body: `✅ สำเร็จ ${done} | 🔄 กำลังทำ ${prog} | ⏳ รอ ${pend}` };
+                return { title: `📊 สรุปงานประจำสัปดาห์ (${pct}% เสร็จ)`, body: `✅ สำเร็จ ${done} | 🔄 กำลังทำ ${prog} | ⏳ รอ ${pend}\nรวมทั้งหมด ${tasks.length} งาน` };
             }
             return null;
         };
@@ -1978,21 +2051,71 @@
             showNotifStatus('✅ ส่งการแจ้งเตือนแล้ว!', true);
         };
 
-        // ── Auto notify check (daily on load) ─────────────────────
-        const checkAutoNotify = () => {
-            const settings = JSON.parse(localStorage.getItem('pea_notify_settings') || '{}');
+        // ════════════════════════════════════════════════════════
+        // FULLY AUTOMATIC NOTIFICATION SYSTEM
+        // - แจ้งเตือนงานวันนี้ทุกครั้งที่เปิดแอป (รายวัน)
+        // - แจ้งเตือนสรุปรายสัปดาห์ทุกวันจันทร์อัตโนมัติ
+        // ════════════════════════════════════════════════════════
+
+        // Request permission silently on first visit
+        const ensureNotifPermission = async () => {
+            if (!('Notification' in window)) return false;
+            if (Notification.permission === 'granted') return true;
+            if (Notification.permission === 'denied') return false;
+            // 'default' — ask once
+            const result = await Notification.requestPermission();
+            updateNotifBadge();
+            return result === 'granted';
+        };
+
+        const fireNotif = (title, body) => {
+            if (Notification.permission !== 'granted') return;
+            new Notification(title, { body, icon: 'icon-192.png', badge: 'icon-192.png', tag: 'pea-auto' });
+        };
+
+        // Core auto-notify runner — called once after data loads
+        window.runAutoNotify = async () => {
+            const ok = await ensureNotifPermission();
+            if (!ok) return;
+
             const now = new Date();
             const today = now.toISOString().slice(0,10);
-            if (localStorage.getItem('pea_last_notify_check') === today) return;
+            const lastCheck = localStorage.getItem('pea_last_notify_check');
+            if (lastCheck === today) return; // already fired today
             localStorage.setItem('pea_last_notify_check', today);
-            if (Notification.permission === 'granted') {
-                if (settings.tomorrow) sendBrowserNotif('tomorrow');
-                if (settings.weekly && now.getDay() === 1) sendBrowserNotif('weekly');
+
+            // 1. รายวัน: งานวันนี้ + งานค้างเกินกำหนด
+            const todayTasks = tasks.filter(t => t.date === today);
+            const overdue    = tasks.filter(t => t.status !== 'done' && t.date < today);
+
+            if (todayTasks.length > 0) {
+                const preview = todayTasks.slice(0,3).map((t,i) => `${i+1}. [${t.teamId}] ${t.title}`).join('\n');
+                const extra   = todayTasks.length > 3 ? `\n...และอีก ${todayTasks.length-3} งาน` : '';
+                fireNotif(`📅 งานวันนี้ มี ${todayTasks.length} งาน`, preview + extra);
+            }
+
+            if (overdue.length > 0) {
+                setTimeout(() => {
+                    fireNotif(`⚠️ มีงานค้างเกินกำหนด ${overdue.length} งาน`,
+                        overdue.slice(0,3).map(t => `• [${t.teamId}] ${t.title} (${t.date})`).join('\n'));
+                }, 2500);
+            }
+
+            // 2. รายสัปดาห์ทุกวันจันทร์
+            if (now.getDay() === 1) {
+                const done = tasks.filter(t => t.status==='done').length;
+                const prog = tasks.filter(t => t.status==='progress').length;
+                const pend = tasks.filter(t => t.status==='pending').length;
+                const pct  = tasks.length > 0 ? Math.round(done/tasks.length*100) : 0;
+                setTimeout(() => {
+                    fireNotif(`📊 สรุปงานประจำสัปดาห์ (${pct}% เสร็จ)`,
+                        `✅ สำเร็จ ${done} | 🔄 กำลังทำ ${prog} | ⏳ รอ ${pend}\nรวมทั้งหมด ${tasks.length} งาน`);
+                }, 5000);
             }
         };
 
         init();
-        setTimeout(() => { updateNotifBadge(); checkAutoNotify(); }, 3000);
+        setTimeout(updateNotifBadge, 1500);
     </script>
     <!-- File Viewer Modal -->
     <div id="fileModal" class="modal-overlay">
