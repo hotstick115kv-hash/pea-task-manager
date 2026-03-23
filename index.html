@@ -967,6 +967,7 @@
                 for (const t of dayTasks) {
                     const chip = document.createElement('div');
                     chip.className = `task-chip task-chip-${t.status}`;
+                    chip.dataset.tid = t.id;
                     chip.addEventListener('click', e => showTaskPopup(e, t.id));
                     chip.innerHTML = `<span class="chip-leader">${getLeaderCached(t.teamId)}</span><span class="chip-title">${t.title}</span>`;
                     inner.appendChild(chip);
@@ -1401,7 +1402,12 @@
         // ── Share helpers ─────────────────────────────────────────
         let _shareTask = null;
 
-        const buildShareText = (task) => {
+        const buildDeepLink = (task) => {
+            const base = location.href.split('?')[0].split('#')[0];
+            return `${base}?task=${task.id}&date=${task.date}`;
+        };
+
+        const buildShareText = (task, includeLink = true) => {
             const statusLabel = { pending:'รอดำเนินการ', progress:'กำลังดำเนินการ', done:'เสร็จสิ้น' };
             const dateObj = new Date(task.date + 'T00:00:00');
             const dateTh = dateObj.toLocaleDateString('th-TH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
@@ -1413,7 +1419,12 @@
             txt += `📅 วันที่: ${dateTh}\n`;
             txt += `🔖 สถานะ: ${statusLabel[task.status] || task.status}\n`;
             if (task.reportNote) txt += `📝 หมายเหตุ: ${task.reportNote}\n`;
-            txt += `━━━━━━━━━━━━━━━━━━━`;
+            if (includeLink) {
+                txt += `━━━━━━━━━━━━━━━━━━━\n`;
+                txt += `🔗 ดูในปฏิทิน: ${buildDeepLink(task)}`;
+            } else {
+                txt += `━━━━━━━━━━━━━━━━━━━`;
+            }
             return txt;
         };
 
@@ -1430,8 +1441,10 @@
             document.getElementById('share-preview-team').textContent = task.teamId + ' · ' + getLeaderCached(task.teamId);
             document.getElementById('share-preview-title').textContent = task.title;
             document.getElementById('share-preview-meta').textContent = `📅 ${dateTh}  |  ${statusLabel[task.status] || task.status}`;
-            document.getElementById('share-text-preview').value = buildShareText(task);
+            document.getElementById('share-link-input').value = buildDeepLink(task);
+            document.getElementById('share-text-preview').value = buildShareText(task, true);
             document.getElementById('share-copy-status').classList.add('hidden');
+            document.getElementById('share-link-copied').classList.add('hidden');
 
             // Show/hide native share button
             const nativeBtn = document.getElementById('share-native-btn');
@@ -1441,24 +1454,29 @@
             lucide.createIcons();
         };
 
+        window.copyShareLink = async () => {
+            const input = document.getElementById('share-link-input');
+            try { await navigator.clipboard.writeText(input.value); }
+            catch { input.select(); document.execCommand('copy'); }
+            const badge = document.getElementById('share-link-copied');
+            badge.classList.remove('hidden');
+            setTimeout(() => badge.classList.add('hidden'), 2000);
+        };
+
         window.shareVia = async (method) => {
             if (!_shareTask) return;
-            const text = buildShareText(_shareTask);
+            const text = buildShareText(_shareTask, true);
             const enc = encodeURIComponent(text);
+            const link = buildDeepLink(_shareTask);
 
             if (method === 'native') {
                 if (navigator.share) {
-                    try { await navigator.share({ title: 'PEA Task: ' + _shareTask.title, text }); }
+                    try { await navigator.share({ title: 'PEA Task: ' + _shareTask.title, text, url: link }); }
                     catch(e) { if (e.name !== 'AbortError') console.warn(e); }
                 }
             } else if (method === 'copy') {
-                try {
-                    await navigator.clipboard.writeText(text);
-                } catch {
-                    // Fallback
-                    const ta = document.getElementById('share-text-preview');
-                    ta.select(); document.execCommand('copy');
-                }
+                try { await navigator.clipboard.writeText(text); }
+                catch { const ta = document.getElementById('share-text-preview'); ta.select(); document.execCommand('copy'); }
                 const status = document.getElementById('share-copy-status');
                 status.classList.remove('hidden');
                 setTimeout(() => status.classList.add('hidden'), 2500);
@@ -2193,6 +2211,45 @@
 
         init();
         setTimeout(updateNotifBadge, 1500);
+        // ── Deep-link handler ──────────────────────────────────────
+        // Reads ?task=TASK_ID&date=YYYY-MM-DD from URL and jumps there
+        const handleDeepLink = () => {
+            const params = new URLSearchParams(location.search);
+            const taskId  = params.get('task');
+            const dateStr = params.get('date');
+            if (!dateStr && !taskId) return;
+            if (dateStr) {
+                const d = new Date(dateStr + 'T00:00:00');
+                if (!isNaN(d)) { currentMonth = new Date(d.getFullYear(), d.getMonth(), 1); setView('calendar'); }
+            }
+            if (taskId) {
+                const tryHighlight = (attempt) => {
+                    if (attempt > 20) return;
+                    const task = tasks.find(t => t.id === taskId);
+                    if (!task) { setTimeout(() => tryHighlight(attempt + 1), 400); return; }
+                    setTimeout(() => {
+                        const day = task.date.split('-')[2].replace(/^0/,'');
+                        document.querySelectorAll('.calendar-cell').forEach(cell => {
+                            const num = cell.querySelector('.date-num');
+                            if (num && num.textContent.trim() === day) {
+                                cell.scrollIntoView({ behavior:'smooth', block:'center' });
+                                cell.style.transition = 'box-shadow 0.4s, background 0.4s';
+                                cell.style.boxShadow = '0 0 0 3px #7c3aed';
+                                cell.style.background = '#f5f3ff';
+                                cell.style.borderRadius = '8px';
+                                setTimeout(() => { cell.style.boxShadow = ''; cell.style.background = ''; }, 3500);
+                            }
+                        });
+                        // Auto-open popup for the task
+                        const firstChip = document.querySelector(`.task-chip[data-tid="${taskId}"]`);
+                        if (firstChip) firstChip.click();
+                    }, 500);
+                };
+                setTimeout(() => tryHighlight(0), 800);
+            }
+            history.replaceState({}, '', location.pathname);
+        };
+        setTimeout(handleDeepLink, 200);
     </script>
     <!-- File Viewer Modal -->
     <div id="fileModal" class="modal-overlay">
@@ -2299,7 +2356,26 @@
                     <div id="share-preview-title" class="font-black text-slate-800 text-sm mb-1"></div>
                     <div id="share-preview-meta" class="text-[11px] text-slate-400 font-bold"></div>
                 </div>
-                <!-- Share options -->
+
+                <!-- Deep link row -->
+                <div class="bg-purple-50 border border-purple-200 rounded-2xl p-3">
+                    <div class="flex items-center gap-2 mb-2">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                        <span class="text-[10px] font-black text-purple-700 uppercase">ลิงก์เปิดปฏิทินตรงวันนี้</span>
+                        <span id="share-link-copied" class="hidden text-[10px] font-black text-green-600 bg-green-100 px-2 py-0.5 rounded-full">✅ คัดลอกแล้ว!</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <input id="share-link-input" type="text" readonly
+                            class="flex-1 text-[11px] text-slate-600 bg-white border border-purple-200 rounded-xl px-3 py-2 outline-none font-mono truncate cursor-pointer"
+                            onclick="this.select()" style="min-width:0;">
+                        <button onclick="copyShareLink()"
+                            class="flex-shrink-0 px-3 py-2 bg-purple-600 text-white rounded-xl text-xs font-black hover:bg-purple-700 transition-all flex items-center gap-1.5">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                            คัดลอก
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-purple-400 mt-1.5 font-bold">ผู้รับจะเปิดปฏิทินและไฮไลต์วันงานนี้ทันที</p>
+                </div>
                 <div class="grid grid-cols-3 gap-3">
                     <button onclick="shareVia('native')" id="share-native-btn"
                         class="flex flex-col items-center gap-2 p-3 rounded-2xl bg-purple-50 border border-purple-100 hover:bg-purple-100 transition-all group">
