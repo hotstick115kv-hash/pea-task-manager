@@ -102,9 +102,11 @@
         .calendar-day-label.sun { color: #ef4444; }
 
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); border: 1px solid #e2e8f0; border-radius: 0 0 12px 12px; overflow: hidden; background: #e2e8f0; gap: 1px; }
-        .calendar-cell { min-height: 72px; background: #fff; padding: 4px; display: flex; flex-direction: column; gap: 2px; transition: all 0.2s; position: relative; overflow: visible; }
-        .calendar-cell.empty { background: #f8fafc; }
-        .calendar-cell:hover { background: #fdfaff; z-index: 10; }
+        .calendar-cell { min-height: 72px; background: #fff; padding: 4px; display: flex; flex-direction: column; gap: 2px; transition: all 0.2s; position: relative; overflow: visible; cursor: pointer; }
+        .calendar-cell.empty { background: #f8fafc; cursor: default; }
+        .calendar-cell:not(.empty):hover { background: #fdfaff; z-index: 10; }
+        .calendar-cell:not(.empty):hover::after { content: '+'; position: absolute; bottom: 3px; right: 3px; width: 18px; height: 18px; background: #7c3aed; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; line-height: 1; text-align: center; z-index: 4; opacity: 0.85; pointer-events: none; }
+        /* ซ่อน + เมื่อมี pres-icon-btn */
         .date-num { font-weight: 800; font-size: 11px; color: #94a3b8; margin-bottom: 1px; cursor: pointer; flex-shrink: 0; line-height: 1; }
         .date-num:hover { color: #7c3aed; }
         .today .date-num { color: #7c3aed; background: #f5f3ff; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid #ddd6fe; }
@@ -118,7 +120,18 @@
         .task-chip-done { background: #f0fdf4; color: #166534; border-left-color: #10b981; }
         .more-tasks { font-size: 8px; color: #7c3aed; font-weight: 800; text-align: center; cursor: pointer; padding: 1px; background: #f5f3ff; border-radius: 4px; }
 
-        /* Notepad */
+        /* Quick-add ripple on calendar click */
+        @keyframes cell-ripple { 0%{transform:scale(0.95);background:#f5f3ff;} 100%{transform:scale(1);background:inherit;} }
+        .calendar-cell.clicked { animation: cell-ripple 0.25s ease-out; }
+
+        /* Realtime update toast */
+        #rt-toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px); z-index:9999; pointer-events:none; opacity:0; transition:all 0.35s cubic-bezier(.34,1.56,.64,1); }
+        #rt-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+        #rt-toast-inner { background:#1e293b; color:white; border-radius:16px; padding:10px 18px; font-size:13px; font-weight:700; display:flex; align-items:center; gap:8px; white-space:nowrap; box-shadow:0 8px 24px rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.08); }
+
+        /* Highlight calendar cell on realtime update */
+        @keyframes cell-flash { 0%{outline:2px solid #7c3aed;outline-offset:0px;} 100%{outline:2px solid transparent;outline-offset:4px;} }
+        .calendar-cell.rt-updated { animation: cell-flash 0.8s ease-out forwards; }
         .note-card { background:white; border-radius:16px; border:1px solid #e2e8f0; padding:1rem; box-shadow:0 2px 8px rgba(0,0,0,0.05); cursor:pointer; transition:all 0.2s; position:relative; }
         .note-card:hover { box-shadow:0 4px 16px rgba(124,58,237,0.12); border-color:#ddd6fe; transform:translateY(-1px); }
         .note-card .note-color-bar { position:absolute; top:0; left:0; width:4px; height:100%; border-radius:16px 0 0 16px; }
@@ -271,6 +284,9 @@
         <p class="text-purple-700 font-bold">กำลังตรวจสอบข้อมูล...</p>
     </div>
 
+    <!-- Realtime update toast -->
+    <div id="rt-toast"><div id="rt-toast-inner"></div></div>
+
     <!-- Lightbox Slideshow -->
     <div id="lightbox">
         <button id="lb-close" onclick="closeLightbox()"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -337,7 +353,7 @@
                 <div class="flex gap-2 w-full sm:w-auto items-center">
                 <div class="relative flex-1 sm:w-64">
                     <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-3 text-slate-400"></i>
-                    <input type="text" id="search" oninput="renderContent()" placeholder="ค้นหาภารกิจ..." class="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm w-full outline-none focus:ring-2 focus:ring-purple-100">
+                    <input type="text" id="search" oninput="debouncedSearch()" placeholder="ค้นหาภารกิจ..." class="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm w-full outline-none focus:ring-2 focus:ring-purple-100">
                 </div>
                 <div class="relative flex-shrink-0">
                     <button onclick="toggleExportMenu()" class="flex items-center gap-1.5 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm whitespace-nowrap">
@@ -907,6 +923,13 @@
             _renderTimer = requestAnimationFrame(() => { _renderTimer = null; renderContent(); });
         };
 
+        // ── Debounce search input (150ms) ─────────────────────────
+        let _searchDebounce = null;
+        window.debouncedSearch = () => {
+            if (_searchDebounce) clearTimeout(_searchDebounce);
+            _searchDebounce = setTimeout(() => { _searchDebounce = null; renderContent(); }, 150);
+        };
+
         // Pre-built leader name cache
         const _leaderCache = {};
         const getLeaderCached = id => {
@@ -914,9 +937,84 @@
             return _leaderCache[id];
         };
 
+        // ── Realtime update toast helper ───────────────────────────
+        let _rtToastTimer = null;
+        const showRealtimeToast = (msg, icon = '🔔') => {
+            const toast = document.getElementById('rt-toast');
+            const inner = document.getElementById('rt-toast-inner');
+            if (!toast || !inner) return;
+            inner.innerHTML = `<span style="font-size:16px">${icon}</span> ${msg}`;
+            toast.classList.add('show');
+            if (_rtToastTimer) clearTimeout(_rtToastTimer);
+            _rtToastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
+        };
+
+        // Flash the affected calendar cell
+        const flashCalendarCell = (dateStr) => {
+            if (activeView !== 'calendar') return;
+            const mm = String(currentMonth.getMonth()+1).padStart(2,'0');
+            const yy = currentMonth.getFullYear();
+            if (!dateStr.startsWith(`${yy}-${mm}`)) return;
+            const day = parseInt(dateStr.split('-')[2]);
+            document.querySelectorAll('.calendar-cell').forEach(cell => {
+                const num = cell.querySelector('.date-num');
+                if (num && parseInt(num.textContent) === day) {
+                    cell.classList.remove('rt-updated');
+                    void cell.offsetWidth; // force reflow
+                    cell.classList.add('rt-updated');
+                    setTimeout(() => cell.classList.remove('rt-updated'), 900);
+                }
+            });
+        };
+
         const startSync = () => {
+            let _prevTaskMap = null; // null = first load
+
             onSnapshot(collection(db, 'tasks'), snap => {
-                tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                const newTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                // ── Realtime update detection (skip first load) ──
+                if (_prevTaskMap !== null) {
+                    snap.docChanges().forEach(change => {
+                        const t = { id: change.doc.id, ...change.doc.data() };
+                        const statusTh = { pending:'รอดำเนินการ', progress:'กำลังทำ', done:'สำเร็จ ✅' };
+                        if (change.type === 'added') {
+                            showRealtimeToast(`เพิ่มงานใหม่: <b>${t.title}</b>`, '📋');
+                            flashCalendarCell(t.date);
+                            // Browser notification
+                            if (Notification.permission === 'granted') {
+                                new Notification('⚡ PEA — งานใหม่', {
+                                    body: `📋 ${t.title}\n👤 ${getLeaderCached(t.teamId)} · 📅 ${t.date}`,
+                                    icon: 'icon-192.png', tag: 'pea-rt-add'
+                                });
+                            }
+                        } else if (change.type === 'modified') {
+                            const prev = _prevTaskMap[t.id];
+                            if (prev && prev.status !== t.status) {
+                                showRealtimeToast(`อัปเดตสถานะ: <b>${t.title}</b> → ${statusTh[t.status] || t.status}`, '🔄');
+                                flashCalendarCell(t.date);
+                                if (Notification.permission === 'granted') {
+                                    new Notification('⚡ PEA — อัปเดตงาน', {
+                                        body: `🔄 ${t.title}\nสถานะ: ${statusTh[t.status] || t.status}`,
+                                        icon: 'icon-192.png', tag: 'pea-rt-update'
+                                    });
+                                }
+                            } else if (prev) {
+                                showRealtimeToast(`แก้ไขงาน: <b>${t.title}</b>`, '✏️');
+                                flashCalendarCell(t.date);
+                            }
+                        } else if (change.type === 'removed') {
+                            const prev = _prevTaskMap[change.doc.id];
+                            if (prev) showRealtimeToast(`ลบงาน: ${prev.title}`, '🗑️');
+                        }
+                    });
+                }
+
+                // Build prev map for next diff
+                _prevTaskMap = {};
+                newTasks.forEach(t => { _prevTaskMap[t.id] = { status: t.status, title: t.title }; });
+
+                tasks = newTasks;
                 scheduleRender();
                 // Auto-notify once after first data load
                 if (!window._notifFired) { window._notifFired = true; setTimeout(runAutoNotify, 800); }
@@ -1009,15 +1107,24 @@
                 const cell = document.createElement('div');
                 cell.className = `calendar-cell${isToday ? ' today' : ''}${dayTasks.length ? ' has-tasks' : ''}${holiday ? ' is-holiday' : ''}`;
 
+                // คลิกพื้นที่ว่างของ cell เพื่อเพิ่มงาน
+                cell.addEventListener('click', (e) => {
+                    // ไม่ทำงานถ้าคลิก chip, presBtn หรือ dateNum
+                    if (e.target.closest('.task-chip') || e.target.closest('.pres-icon-btn') || e.target.closest('.date-num')) return;
+                    openAssignModalForDate(dateStr, cell);
+                });
+
                 const presBtn = document.createElement('button');
                 presBtn.className = 'pres-icon-btn';
                 presBtn.title = 'นำเสนอวันนี้';
                 presBtn.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>`;
-                presBtn.addEventListener('click', () => openPresentationMode(dateStr));
+                presBtn.addEventListener('click', (e) => { e.stopPropagation(); openPresentationMode(dateStr); });
 
                 const dateNum = document.createElement('span');
                 dateNum.className = 'date-num';
                 dateNum.textContent = d;
+                dateNum.title = 'เพิ่มงานวันที่ ' + dateStr;
+                dateNum.addEventListener('click', (e) => { e.stopPropagation(); openAssignModalForDate(dateStr, cell); });
 
                 const inner = document.createElement('div');
                 inner.style.cssText = 'display:flex;flex-direction:column;gap:2px;';
@@ -1386,6 +1493,20 @@
             document.getElementById('taskForm').reset();
             document.getElementById('assign-previews').innerHTML = "";
             document.getElementById('field-remark-links').innerHTML = "";
+            openModal('assignModal');
+        };
+
+        // ── เพิ่มงานจากการคลิกวันที่ในปฏิทิน ──────────────────────────
+        window.openAssignModalForDate = (dateStr, cellEl) => {
+            document.getElementById('assign-modal-title').innerText = "มอบหมายภารกิจ";
+            document.getElementById('field-id').value = "";
+            document.getElementById('taskForm').reset();
+            document.getElementById('assign-previews').innerHTML = "";
+            document.getElementById('field-remark-links').innerHTML = "";
+            // Pre-fill date
+            document.getElementById('field-date').value = dateStr;
+            // Visual feedback on cell
+            if (cellEl) { cellEl.classList.add('clicked'); setTimeout(() => cellEl.classList.remove('clicked'), 300); }
             openModal('assignModal');
         };
         // ── Remark field helpers ───────────────────────────────────
