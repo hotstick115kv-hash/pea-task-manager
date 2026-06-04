@@ -366,7 +366,7 @@
                 <button onclick="closeModal('holidayModal')" class="p-2 hover:bg-amber-100 rounded-full"><i data-lucide="x"></i></button>
             </div>
             <div class="p-5 space-y-4">
-                <p class="text-xs text-slate-400 font-bold">เพิ่ม/ลบ/แก้ไขวันหยุดได้ตามต้องการ — บันทึกเก็บในอุปกรณ์ · รูปแบบวันที่ปีคริสต์ศักราช</p>
+                <p class="text-xs text-slate-400 font-bold">👑 Admin เท่านั้น — บันทึกแล้วทุกเครื่องจะอัปเดตพร้อมกันทันที (ซิงค์ผ่าน Firestore)</p>
                 <div id="holiday-editor"></div>
                 <button onclick="addHolidayRow()" class="w-full py-2.5 border-2 border-dashed border-amber-200 text-amber-700 rounded-xl text-sm font-black hover:bg-amber-50 transition-all">+ เพิ่มวันหยุด</button>
                 <div class="flex gap-3 pt-2">
@@ -411,9 +411,9 @@
                     <span class="text-base">👤</span>
                     <span id="nav-user-name" class="text-xs font-black text-purple-700 max-w-[120px] truncate"></span>
                 </div>
-                <!-- Team & Holiday quick buttons -->
-                <button onclick="openTeamModal()" title="จัดการทีม" class="p-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm hover:bg-slate-200 transition-all" style="font-size:16px;">👥</button>
-                <button onclick="openHolidayModal()" title="แก้ไขวันหยุด" class="p-2.5 bg-amber-50 text-amber-600 rounded-xl text-sm hover:bg-amber-100 transition-all" style="font-size:16px;">📅</button>
+                <!-- Team & Holiday quick buttons (Admin only) -->
+                <button onclick="adminGate(openTeamModal)" title="จัดการทีม (Admin)" class="p-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm hover:bg-slate-200 transition-all" style="font-size:16px;">👥</button>
+                <button onclick="adminGate(openHolidayModal)" title="แก้ไขวันหยุด (Admin)" class="p-2.5 bg-amber-50 text-amber-600 rounded-xl text-sm hover:bg-amber-100 transition-all" style="font-size:16px;">📅</button>
                 <button id="install-btn" onclick="installApp()" class="hidden items-center gap-1.5 px-3 py-2 bg-purple-100 text-purple-700 rounded-xl text-xs font-bold hover:bg-purple-200 transition-all border border-purple-200">
                     <i data-lucide="download" class="w-3.5 h-3.5"></i>
                     <span class="hidden sm:inline">ติดตั้งแอป</span>
@@ -826,7 +826,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref as sRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
         const firebaseConfig = {
@@ -1051,6 +1051,8 @@
             try {
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app); db = getFirestore(app); storage = getStorage(app);
+                // Expose Firestore helpers for holiday sync
+                window._fsRefs = { doc, setDoc };
 
                 // Timeout 10s
                 const authPromise = signInAnonymously(auth);
@@ -1060,7 +1062,7 @@
                 await Promise.race([authPromise, timeoutPromise]);
 
                 onAuthStateChanged(auth, user => {
-                    if (user) { document.getElementById('loading').style.display = 'none'; startSync(); }
+                    if (user) { document.getElementById('loading').style.display = 'none'; startSync(); startHolidaySync(); }
                 });
                 document.getElementById('field-team').innerHTML = `<option value="">เลือกสายงาน...</option>` + TEAMS.map(t => `<option value="${t.id}">${t.id}: ${t.name}</option>`).join('');
                 lucide.createIcons();
@@ -1734,6 +1736,19 @@
         // ════════════════════════════════════════════════════════
         const ADMIN_CODE = '489961';
         const isAdmin = () => currentUser?.code === ADMIN_CODE;
+
+        // ── Admin gate: shows alert if not admin, otherwise runs fn ──
+        window.adminGate = (fn) => {
+            if (!currentUser) {
+                alert('⛔ กรุณาเข้าสู่ระบบก่อน');
+                return;
+            }
+            if (!isAdmin()) {
+                alert('⛔ สิทธิ์ Admin เท่านั้น\n\nฟีเจอร์นี้สำหรับ Admin (รหัส 489961) เท่านั้น\nกรุณาติดต่อ นายศุภชัย จันทร์ครุฑ');
+                return;
+            }
+            fn();
+        };
 
         // User quota: max 3 deletes per calendar day (stored in localStorage)
         const DELETE_QUOTA_MAX = 3;
@@ -2815,12 +2830,31 @@
         };
 
         // ══════════════════════════════════════════════════════════
-        // HOLIDAY EDITOR
+        // HOLIDAY EDITOR — synced via Firestore (Admin only)
         // ══════════════════════════════════════════════════════════
         const DEFAULT_HOLIDAYS_JSON = JSON.stringify(THAI_HOLIDAYS);
-        const loadHolidays = () => { try { const s = localStorage.getItem('pea_holidays'); return s ? JSON.parse(s) : null; } catch { return null; } };
-        // Override THAI_HOLIDAYS with saved user holidays if available
-        (() => { const h = loadHolidays(); if (h) Object.keys(THAI_HOLIDAYS).forEach(k => delete THAI_HOLIDAYS[k]); if (h) Object.assign(THAI_HOLIDAYS, h); })();
+
+        // Apply a holiday map to the live THAI_HOLIDAYS object
+        const applyHolidays = (h) => {
+            Object.keys(THAI_HOLIDAYS).forEach(k => delete THAI_HOLIDAYS[k]);
+            Object.assign(THAI_HOLIDAYS, h);
+        };
+
+        // Start listening to Firestore holidays document (shared across all devices)
+        const startHolidaySync = () => {
+            const { doc: fsDoc, onSnapshot: fsOnSnapshot, setDoc } = window._fsRefs;
+            const holidayRef = fsDoc(db, 'config', 'holidays');
+            fsOnSnapshot(holidayRef, snap => {
+                if (snap.exists()) {
+                    const data = snap.data();
+                    if (data && data.map) {
+                        applyHolidays(data.map);
+                        _calCache.key = ''; // invalidate cache so calendar re-renders
+                        scheduleRender();
+                    }
+                }
+            });
+        };
 
         window.openHolidayModal = () => {
             const editor = document.getElementById('holiday-editor');
@@ -2844,26 +2878,26 @@
                 </div>`);
             editor.lastElementChild.querySelector('.h-name').focus();
         };
-        window.saveHolidaysModal = () => {
+        window.saveHolidaysModal = async () => {
+            if (!isAdmin()) { alert('⛔ เฉพาะ Admin เท่านั้น'); return; }
             const newH = {};
             document.querySelectorAll('.holiday-row').forEach(row => {
                 const d = row.querySelector('.h-date').value;
                 const n = row.querySelector('.h-name').value.trim();
                 if (d && n) newH[d] = n;
             });
-            // Overwrite THAI_HOLIDAYS in place
-            Object.keys(THAI_HOLIDAYS).forEach(k => delete THAI_HOLIDAYS[k]);
-            Object.assign(THAI_HOLIDAYS, newH);
-            localStorage.setItem('pea_holidays', JSON.stringify(newH));
+            // Save to Firestore — all devices will update via snapshot listener
+            const { doc: fsDoc, setDoc } = window._fsRefs;
+            await setDoc(fsDoc(db, 'config', 'holidays'), { map: newH, updatedBy: currentUser.code, updatedAt: new Date().toISOString() });
             closeModal('holidayModal');
-            scheduleRender();
-            showRealtimeToast('บันทึกวันหยุดแล้ว 📅', '✅');
+            showRealtimeToast('บันทึกวันหยุดแล้ว — ทุกเครื่องจะอัปเดตอัตโนมัติ 📅', '✅');
         };
-        window.resetHolidays = () => {
+        window.resetHolidays = async () => {
+            if (!isAdmin()) { alert('⛔ เฉพาะ Admin เท่านั้น'); return; }
             if (!confirm('รีเซ็ตวันหยุดกลับค่าเริ่มต้น?')) return;
-            localStorage.removeItem('pea_holidays');
-            Object.keys(THAI_HOLIDAYS).forEach(k => delete THAI_HOLIDAYS[k]);
-            Object.assign(THAI_HOLIDAYS, JSON.parse(DEFAULT_HOLIDAYS_JSON));
+            const defaultH = JSON.parse(DEFAULT_HOLIDAYS_JSON);
+            const { doc: fsDoc, setDoc } = window._fsRefs;
+            await setDoc(fsDoc(db, 'config', 'holidays'), { map: defaultH, updatedBy: currentUser.code, updatedAt: new Date().toISOString() });
             openHolidayModal();
         };
 
