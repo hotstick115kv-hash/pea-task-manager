@@ -120,6 +120,35 @@
         .task-chip-done { background: #f0fdf4; color: #166534; border-left-color: #10b981; }
         .more-tasks { font-size: 8px; color: #7c3aed; font-weight: 800; text-align: center; cursor: pointer; padding: 1px; background: #f5f3ff; border-radius: 4px; }
 
+        /* ── Login Screen ───────────────────────────────────── */
+        #login-screen { position:fixed; inset:0; background:linear-gradient(135deg,#4c1d95 0%,#7c3aed 50%,#a855f7 100%); z-index:200; display:flex; align-items:center; justify-content:center; padding:20px; }
+        #login-screen.hidden { display:none; }
+        .login-box { background:white; border-radius:24px; padding:32px 28px; width:100%; max-width:360px; box-shadow:0 32px 80px rgba(0,0,0,0.25); }
+        .login-pin-display { display:flex; gap:8px; justify-content:center; margin:18px 0; }
+        .login-pin-dot { width:14px; height:14px; border-radius:50%; background:#e2e8f0; transition:background 0.2s; }
+        .login-pin-dot.filled { background:#7c3aed; }
+        .login-keypad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px; }
+        .login-key { padding:16px 0; background:#f8fafc; border:none; border-radius:16px; font-size:20px; font-weight:900; color:#1e293b; cursor:pointer; transition:all 0.15s; font-family:'Sarabun',sans-serif; touch-action:manipulation; }
+        .login-key:active, .login-key:hover { background:#7c3aed; color:white; transform:scale(0.96); }
+        .login-key.del { font-size:16px; color:#64748b; }
+        .login-key.del:hover { background:#fee2e2; color:#dc2626; }
+        #login-user-preview { min-height:28px; text-align:center; font-size:14px; font-weight:700; color:#7c3aed; transition:all 0.2s; }
+        #login-error { color:#dc2626; font-size:13px; font-weight:700; text-align:center; margin-top:8px; min-height:20px; }
+
+        /* ── Team Manager Modal ──────────────────────────────── */
+        .team-row { display:flex; gap:8px; align-items:center; padding:8px 0; border-bottom:1px solid #f1f5f9; }
+        .team-row input { flex:1; border:1px solid #e2e8f0; border-radius:10px; padding:7px 10px; font-size:13px; font-family:'Sarabun',sans-serif; outline:none; }
+        .team-row input:focus { border-color:#7c3aed; }
+        .team-row .del-team { background:#fee2e2; border:none; color:#dc2626; border-radius:8px; padding:6px 10px; cursor:pointer; font-size:13px; font-weight:700; }
+
+        /* ── Holiday Editor (mobile-friendly) ───────────────── */
+        #holiday-editor { display:grid; grid-template-columns:1fr; gap:6px; max-height:50vh; overflow-y:auto; padding:2px; }
+        .holiday-row { display:flex; gap:6px; align-items:center; }
+        .holiday-row input[type="date"] { width:130px; flex-shrink:0; border:1px solid #e2e8f0; border-radius:10px; padding:7px 8px; font-size:12px; outline:none; }
+        .holiday-row input[type="text"] { flex:1; min-width:0; border:1px solid #e2e8f0; border-radius:10px; padding:7px 10px; font-size:12px; font-family:'Sarabun',sans-serif; outline:none; }
+        .holiday-row input:focus { border-color:#7c3aed; }
+        .holiday-row .del-h { background:#fee2e2; border:none; color:#dc2626; border-radius:8px; padding:6px 9px; cursor:pointer; font-size:12px; flex-shrink:0; }
+
         /* Quick-add ripple on calendar click */
         @keyframes cell-ripple { 0%{transform:scale(0.95);background:#f5f3ff;} 100%{transform:scale(1);background:inherit;} }
         .calendar-cell.clicked { animation: cell-ripple 0.25s ease-out; }
@@ -279,6 +308,75 @@
 </head>
 <body>
 
+    <!-- ═══ LOGIN SCREEN ════════════════════════════════════════════ -->
+    <div id="login-screen">
+        <div class="login-box">
+            <div class="text-center mb-4">
+                <div class="w-14 h-14 brand-primary rounded-2xl flex items-center justify-center text-white shadow-lg shadow-purple-300 mx-auto mb-3">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                </div>
+                <h2 class="text-xl font-black text-slate-800">PEA Task Manager</h2>
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">กรอกรหัสพนักงาน</p>
+            </div>
+            <div id="login-pin-display" class="login-pin-display"></div>
+            <div id="login-user-preview">กรอกรหัส…</div>
+            <div class="login-keypad" id="login-keypad">
+                <button class="login-key" onclick="loginKey('1')">1</button>
+                <button class="login-key" onclick="loginKey('2')">2</button>
+                <button class="login-key" onclick="loginKey('3')">3</button>
+                <button class="login-key" onclick="loginKey('4')">4</button>
+                <button class="login-key" onclick="loginKey('5')">5</button>
+                <button class="login-key" onclick="loginKey('6')">6</button>
+                <button class="login-key" onclick="loginKey('7')">7</button>
+                <button class="login-key" onclick="loginKey('8')">8</button>
+                <button class="login-key" onclick="loginKey('9')">9</button>
+                <button class="login-key del" onclick="loginDel()">⌫</button>
+                <button class="login-key" onclick="loginKey('0')">0</button>
+                <button class="login-key" style="background:#7c3aed;color:white;font-size:14px;" onclick="loginSubmit()">เข้าสู่ระบบ</button>
+            </div>
+            <div id="login-error"></div>
+            <p class="text-center text-[10px] text-slate-300 mt-5 font-bold">การไฟฟ้าส่วนภูมิภาค · Digital Transformation</p>
+        </div>
+    </div>
+
+    <!-- ═══ TEAM MANAGER MODAL ════════════════════════════════════ -->
+    <div id="teamModal" class="modal-overlay">
+        <div class="modal-content" style="max-width:520px;">
+            <div class="p-5 border-b flex justify-between items-center bg-slate-50">
+                <h3 class="text-lg font-black">👥 จัดการสายงาน / ทีม</h3>
+                <button onclick="closeModal('teamModal')" class="p-2 hover:bg-slate-200 rounded-full"><i data-lucide="x"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <p class="text-xs text-slate-400 font-bold">แก้ไขชื่อทีม เพิ่ม หรือลบทีมได้ตามต้องการ — บันทึกเก็บในอุปกรณ์</p>
+                <div id="team-rows"></div>
+                <button onclick="addTeamRow()" class="w-full py-2.5 border-2 border-dashed border-purple-200 text-purple-600 rounded-xl text-sm font-black hover:bg-purple-50 transition-all">+ เพิ่มทีมใหม่</button>
+                <div class="flex gap-3 pt-2">
+                    <button onclick="resetTeams()" class="flex-1 py-2.5 border border-slate-200 text-slate-500 rounded-xl text-sm font-bold hover:bg-slate-50">↺ ค่าเริ่มต้น</button>
+                    <button onclick="saveTeamsModal()" class="flex-1 py-2.5 brand-primary text-white rounded-xl text-sm font-black">💾 บันทึก</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ HOLIDAY EDITOR MODAL ══════════════════════════════════ -->
+    <div id="holidayModal" class="modal-overlay">
+        <div class="modal-content" style="max-width:540px;">
+            <div class="p-5 border-b flex justify-between items-center bg-amber-50">
+                <h3 class="text-lg font-black text-amber-900">📅 แก้ไขวันหยุดราชการ</h3>
+                <button onclick="closeModal('holidayModal')" class="p-2 hover:bg-amber-100 rounded-full"><i data-lucide="x"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <p class="text-xs text-slate-400 font-bold">เพิ่ม/ลบ/แก้ไขวันหยุดได้ตามต้องการ — บันทึกเก็บในอุปกรณ์ · รูปแบบวันที่ปีคริสต์ศักราช</p>
+                <div id="holiday-editor"></div>
+                <button onclick="addHolidayRow()" class="w-full py-2.5 border-2 border-dashed border-amber-200 text-amber-700 rounded-xl text-sm font-black hover:bg-amber-50 transition-all">+ เพิ่มวันหยุด</button>
+                <div class="flex gap-3 pt-2">
+                    <button onclick="resetHolidays()" class="flex-1 py-2.5 border border-slate-200 text-slate-500 rounded-xl text-sm font-bold hover:bg-slate-50">↺ ค่าเริ่มต้น</button>
+                    <button onclick="saveHolidaysModal()" class="flex-1 py-2.5 bg-amber-500 text-white rounded-xl text-sm font-black hover:bg-amber-600">💾 บันทึก</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="loading" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center">
         <div class="w-14 h-14 border-4 border-purple-100 border-t-purple-600 rounded-full animate-spin mb-4"></div>
         <p class="text-purple-700 font-bold">กำลังตรวจสอบข้อมูล...</p>
@@ -308,6 +406,14 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
+                <!-- User greeting -->
+                <div id="nav-user" class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-purple-50 border border-purple-100 rounded-xl">
+                    <span class="text-base">👤</span>
+                    <span id="nav-user-name" class="text-xs font-black text-purple-700 max-w-[120px] truncate"></span>
+                </div>
+                <!-- Team & Holiday quick buttons -->
+                <button onclick="openTeamModal()" title="จัดการทีม" class="p-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm hover:bg-slate-200 transition-all" style="font-size:16px;">👥</button>
+                <button onclick="openHolidayModal()" title="แก้ไขวันหยุด" class="p-2.5 bg-amber-50 text-amber-600 rounded-xl text-sm hover:bg-amber-100 transition-all" style="font-size:16px;">📅</button>
                 <button id="install-btn" onclick="installApp()" class="hidden items-center gap-1.5 px-3 py-2 bg-purple-100 text-purple-700 rounded-xl text-xs font-bold hover:bg-purple-200 transition-all border border-purple-200">
                     <i data-lucide="download" class="w-3.5 h-3.5"></i>
                     <span class="hidden sm:inline">ติดตั้งแอป</span>
@@ -317,6 +423,8 @@
                     <span class="hidden sm:inline">มอบหมายงาน</span>
                     <span class="sm:hidden">เพิ่ม</span>
                 </button>
+                <!-- Logout -->
+                <button onclick="doLogout()" title="ออกจากระบบ" class="p-2.5 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-all text-base">🚪</button>
             </div>
         </div>
     </nav>
@@ -624,9 +732,15 @@
                         <label class="text-[10px] font-black uppercase text-slate-400 mb-1.5 block">สายงาน</label>
                         <select id="field-team" class="form-input" required></select>
                     </div>
-                    <div>
-                        <label class="text-[10px] font-black uppercase text-slate-400 mb-1.5 block">วันที่</label>
-                        <input type="date" id="field-date" class="form-input" required>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[10px] font-black uppercase text-slate-400 mb-1.5 block">วันเริ่มต้น</label>
+                            <input type="date" id="field-date" class="form-input" required>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black uppercase text-slate-400 mb-1.5 block">วันสิ้นสุด</label>
+                            <input type="date" id="field-date-end" class="form-input">
+                        </div>
                     </div>
                 </div>
                 <div>
@@ -724,7 +838,45 @@
             appId: "1:831251520185:web:443db99fdf5ab0f13f5968"
         };
 
-        const TEAMS = [
+        // ── ผู้ใช้งานระบบ (รหัสพนักงาน → ชื่อ) ─────────────────────
+        const USERS = {
+            "898":     "นายจิระพันธ์ สวนานนท์",
+            "449717":  "นายนิมิตร ทองชิต",
+            "502544":  "นายเฉลิมพล แซ่ลิ้ม",
+            "502661":  "นายนพดล นาควานิช",
+            "502662":  "นายอภิรักษ์ เทพทุ่งหลวง",
+            "502663":  "นายธนากร ทองชิต",
+            "502668":  "นายวรเชษฐ์ พรามพิทักษ์",
+            "503561":  "ว่าที่ร้อยตรีโกวิท รัตนพรหมณ์",
+            "503570":  "นายรณภัทร ชาติเน้ย",
+            "489961":  "นายศุภชัย จันทร์ครุฑ",
+            "506722":  "นายกลศาสตร์ ณ นคร",
+            "507738":  "นายดนุเดช วิมาละ",
+            "511093":  "นายภูมินฤทธิ์ โสพันธ์",
+            "512044":  "นายอดิศร มีแสง",
+            "512289":  "นายจิรานุวัฒน์ ท่าสว่าง",
+            "512303":  "นายปริญญา แก้วเกตุ",
+            "512461":  "นายวัชรินทร์ สุทธิกลัด",
+            "512779":  "นายธันวา บุญริศ",
+            "514027":  "นายก่อเกียรติ ใจรังษี",
+            "514966":  "นายเศรษฐพงศ์ จันทร์ทอง",
+            "515022":  "นายภัคพล ทิพย์บรรณา",
+            "9003644": "นายสุพจน์ รักษาธรรม",
+            "9003660": "นายสยาม นิลอรุณ",
+            "9003662": "นายวีรศักดิ์ ไชยยศ",
+            "9003665": "นายวิรัส พั้วเบ้า",
+            "9003666": "นายวายุ ชูศักดิ์",
+            "9003667": "นายยุทธศักดิ์ ทองสัมฤทธิ์",
+            "9003668": "นายไชยาพร ไตรมาศ",
+            "9009183": "นายอุเทน ปานทะลุง",
+            "9009185": "นายเกียรติชัยพัฒน์ ทองหัวเตย",
+            "9009346": "นายวัชฤทธิ์ คงเติม",
+            "9010782": "นายชัชวิน ทองจิตร",
+        };
+        let currentUser = null; // { code, name }
+
+        // ── ทีม (โหลดจาก localStorage หรือค่าเริ่มต้น) ──────────────
+        const DEFAULT_TEAMS = [
             { id: "T01", name: "ทีมปรับปรุงระบบไฟฟ้า (หน.โกวิท)" },
             { id: "T02", name: "ทีมซ่อมแซมระบบไฟฟ้า (หน.รณภัทร)" },
             { id: "T03", name: "ทีมตัดต้นไม้ / ริดรอน (หน.อภิรักษ์)" },
@@ -736,6 +888,9 @@
             { id: "T09", name: "ทีม Patrol 33 kV & ละเมิด (หน.ธันวา)" },
             { id: "T10", name: "คุมงานก่อสร้าง & จ้างเหมา (หน.นพดล)" }
         ];
+        const loadTeams = () => { try { const s = localStorage.getItem('pea_teams'); return s ? JSON.parse(s) : DEFAULT_TEAMS; } catch { return DEFAULT_TEAMS; } };
+        const saveTeams = (arr) => localStorage.setItem('pea_teams', JSON.stringify(arr));
+        let TEAMS = loadTeams();
 
         const TH_MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
 
@@ -1085,11 +1240,23 @@
             document.getElementById('month-label').innerText = `${TH_MONTHS[m]} ${y+543}`;
             const body = document.getElementById('calendar-body');
 
-            // Rebuild date index from filtered data
+            // Rebuild date index from filtered data (รองรับงานหลายวัน dateEnd)
             const byDate = {};
             for (const t of data) {
                 if (!byDate[t.date]) byDate[t.date] = [];
                 byDate[t.date].push(t);
+                // ถ้ามีวันสิ้นสุด ให้ปรากฏในทุกวันระหว่างช่วง
+                if (t.dateEnd && t.dateEnd > t.date) {
+                    let d = new Date(t.date + 'T00:00:00');
+                    d.setDate(d.getDate() + 1);
+                    const end = new Date(t.dateEnd + 'T00:00:00');
+                    while (d <= end) {
+                        const ds = d.toISOString().slice(0,10);
+                        if (!byDate[ds]) byDate[ds] = [];
+                        if (!byDate[ds].find(x => x.id === t.id)) byDate[ds].push(t);
+                        d.setDate(d.getDate() + 1);
+                    }
+                }
             }
 
             const first = new Date(y, m, 1).getDay(), last = new Date(y, m+1, 0).getDate();
@@ -1240,6 +1407,7 @@
             document.getElementById('field-id').value = task.id;
             document.getElementById('field-team').value = task.teamId;
             document.getElementById('field-date').value = task.date;
+            document.getElementById('field-date-end').value = task.dateEnd || '';
             document.getElementById('field-title').value = task.title;
             document.getElementById('field-remark').value = task.remark || '';
             renderRemarkLinks(task.remark || '');
@@ -1298,6 +1466,7 @@
                 const data = {
                     teamId: document.getElementById('field-team').value,
                     date: document.getElementById('field-date').value,
+                    dateEnd: document.getElementById('field-date-end').value || '',
                     title: document.getElementById('field-title').value,
                     remark: document.getElementById('field-remark').value.trim(),
                 };
@@ -1560,8 +1729,59 @@
             if (v !== prev) renderContent();
         };
         window.moveMonth = d => { currentMonth.setMonth(currentMonth.getMonth()+d); _calCache.key = ''; renderContent(); };
+        // ════════════════════════════════════════════════════════
+        // ROLE & DELETE QUOTA SYSTEM
+        // ════════════════════════════════════════════════════════
+        const ADMIN_CODE = '489961';
+        const isAdmin = () => currentUser?.code === ADMIN_CODE;
+
+        // User quota: max 3 deletes per calendar day (stored in localStorage)
+        const DELETE_QUOTA_MAX = 3;
+        const getDeleteQuota = () => {
+            try {
+                const today = new Date().toISOString().slice(0,10);
+                const raw = localStorage.getItem('pea_del_quota');
+                if (!raw) return { date: today, count: 0 };
+                const q = JSON.parse(raw);
+                if (q.date !== today) return { date: today, count: 0 }; // reset daily
+                return q;
+            } catch { return { date: new Date().toISOString().slice(0,10), count: 0 }; }
+        };
+        const incDeleteQuota = () => {
+            const q = getDeleteQuota();
+            q.count++;
+            localStorage.setItem('pea_del_quota', JSON.stringify(q));
+        };
+
         window.handleDeleteTask = async (id) => {
-            if (!confirm("ลบภารกิจนี้?")) return;
+            if (!currentUser) { alert('กรุณาเข้าสู่ระบบก่อน'); return; }
+
+            if (!isAdmin()) {
+                // Check daily quota
+                const q = getDeleteQuota();
+                if (q.count >= DELETE_QUOTA_MAX) {
+                    // Show friendly alert instead of deleting
+                    const adminName = '489961 · นายศุภชัย จันทร์ครุฑ';
+                    alert(
+                        `⛔ เกินสิทธิ์การลบรายวัน\n\n` +
+                        `คุณลบงานครบ ${DELETE_QUOTA_MAX} รายการแล้ววันนี้\n` +
+                        `กรุณาติดต่อ Admin เพื่อดำเนินการต่อ\n\n` +
+                        `👤 Admin: ${adminName}`
+                    );
+                    return;
+                }
+                // Show remaining quota in confirm
+                const remaining = DELETE_QUOTA_MAX - q.count - 1;
+                const confirmMsg =
+                    `⚠️ ยืนยันลบภารกิจนี้?\n\n` +
+                    `หลังลบแล้วจะเหลือสิทธิ์ลบ: ${remaining} ครั้ง (วันนี้)\n` +
+                    `ถ้าต้องการลบมากกว่านี้ กรุณาติดต่อ Admin`;
+                if (!confirm(confirmMsg)) return;
+            } else {
+                // Admin: simple confirm
+                if (!confirm('ลบภารกิจนี้? (Admin)')) return;
+            }
+
             const task = tasks.find(t => t.id === id);
             if (task) {
                 const allFiles = [...parseFiles(task.files_v2), ...parseFiles(task.reportFiles_v2)];
@@ -1570,6 +1790,7 @@
                 }
             }
             await deleteDoc(doc(db, 'tasks', id));
+            if (!isAdmin()) incDeleteQuota();
         };
         window.closePresMode = () => document.getElementById('pres-mode').classList.remove('active');
 
@@ -1598,6 +1819,23 @@
             }
             const allF = [...parseFiles(task.files_v2), ...parseFiles(task.reportFiles_v2)];
             document.getElementById('popup-btn-files').style.display = allF.length > 0 ? 'flex' : 'none';
+            // Update delete button label with quota info
+            const delLabel = document.getElementById('popup-del-label');
+            const delBtn = document.getElementById('popup-del-btn');
+            if (isAdmin()) {
+                delLabel.textContent = 'ลบงาน 👑';
+                delBtn.title = 'Admin: ลบได้ไม่จำกัด';
+            } else {
+                const q = getDeleteQuota();
+                const rem = Math.max(0, DELETE_QUOTA_MAX - q.count);
+                if (rem === 0) {
+                    delLabel.textContent = 'ลบได้เต็มแล้ว ⛔';
+                    delBtn.style.opacity = '0.5';
+                } else {
+                    delLabel.textContent = `ลบงาน (เหลือ ${rem})`;
+                    delBtn.style.opacity = '';
+                }
+            }
             const popup = document.getElementById('task-popup');
             const overlay = document.getElementById('popup-overlay');
             popup.classList.add('visible');
@@ -1677,7 +1915,7 @@
             document.getElementById('share-subtitle').textContent = task.teamId + ' · ' + getLeaderCached(task.teamId);
             document.getElementById('share-preview-team').textContent = task.teamId + ' · ' + getLeaderCached(task.teamId);
             document.getElementById('share-preview-title').textContent = task.title;
-            document.getElementById('share-preview-meta').textContent = `📅 ${dateTh}  |  ${statusLabel[task.status] || task.status}`;
+            document.getElementById('share-preview-meta').textContent = `📅 ${dateTh}${task.dateEnd && task.dateEnd !== task.date ? ' → ' + task.dateEnd : ''}  |  ${statusLabel[task.status] || task.status}`;
             document.getElementById('share-link-input').value = buildDeepLink(task);
             document.getElementById('share-text-preview').value = buildShareText(task, true);
             document.getElementById('share-copy-status').classList.add('hidden');
@@ -1788,7 +2026,7 @@
                     <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${task.status==='done'?'bg-emerald-100 text-emerald-700':task.status==='progress'?'bg-blue-100 text-blue-700':'bg-amber-100 text-amber-700'}">
                         ${task.status==='done'?'สำเร็จ':task.status==='progress'?'กำลังทำ':'รอดำเนินการ'}
                     </span>
-                    <span class="text-xs text-slate-400 font-bold flex items-center gap-1">📅 ${task.date}</span>
+                    <span class="text-xs text-slate-400 font-bold flex items-center gap-1">📅 ${task.date}${task.dateEnd && task.dateEnd !== task.date ? ' → ' + task.dateEnd : ''}</span>
                 </div>
                 ${task.reportNote ? `<div class="bg-emerald-50 border-l-4 border-emerald-500 p-3 rounded-xl text-sm text-emerald-800 italic">"${task.reportNote}"</div>` : ''}
                 ${renderSection(taskF, '📋 ไฟล์สั่งงาน', 'bg-purple-100 text-purple-700')}
@@ -2450,7 +2688,187 @@
             }
         };
 
+        // ══════════════════════════════════════════════════════════
+        // LOGIN SYSTEM
+        // ══════════════════════════════════════════════════════════
+        let _loginBuffer = '';
+        const MAX_CODE_LEN = 7;
+
+        const renderLoginDots = () => {
+            const n = Math.max(3, _loginBuffer.length + 1);
+            document.getElementById('login-pin-display').innerHTML =
+                Array.from({length: Math.min(n, MAX_CODE_LEN)}, (_, i) =>
+                    `<div class="login-pin-dot${i < _loginBuffer.length ? ' filled' : ''}"></div>`
+                ).join('');
+        };
+        const renderLoginPreview = () => {
+            const el = document.getElementById('login-user-preview');
+            if (!_loginBuffer) { el.textContent = 'กรอกรหัส…'; el.style.color = '#94a3b8'; return; }
+            const name = USERS[_loginBuffer];
+            if (name) { el.textContent = '✅ ' + name; el.style.color = '#7c3aed'; }
+            else { el.textContent = _loginBuffer.length >= 3 ? 'ไม่พบรหัสนี้…' : 'กรอกรหัส…'; el.style.color = '#94a3b8'; }
+        };
+        window.loginKey = (k) => {
+            if (_loginBuffer.length >= MAX_CODE_LEN) return;
+            _loginBuffer += k;
+            renderLoginDots(); renderLoginPreview();
+            document.getElementById('login-error').textContent = '';
+            // Auto-submit if exact match found
+            if (USERS[_loginBuffer]) setTimeout(loginSubmit, 250);
+        };
+        window.loginDel = () => {
+            _loginBuffer = _loginBuffer.slice(0, -1);
+            renderLoginDots(); renderLoginPreview();
+            document.getElementById('login-error').textContent = '';
+        };
+        window.loginSubmit = () => {
+            const name = USERS[_loginBuffer];
+            if (name) {
+                currentUser = { code: _loginBuffer, name };
+                const shortName = name.replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'');
+                const isAdminUser = _loginBuffer === ADMIN_CODE;
+                document.getElementById('nav-user-name').innerHTML =
+                    shortName + (isAdminUser ? ' <span style="background:#7c3aed;color:white;font-size:9px;padding:1px 5px;border-radius:6px;font-weight:900;vertical-align:middle;">ADMIN</span>' : '');
+                document.getElementById('nav-user').classList.remove('hidden');
+                document.getElementById('login-screen').classList.add('hidden');
+                localStorage.setItem('pea_session', JSON.stringify(currentUser));
+                _loginBuffer = '';
+            } else {
+                document.getElementById('login-error').textContent = '❌ ไม่พบรหัสพนักงาน กรุณาตรวจสอบอีกครั้ง';
+                _loginBuffer = '';
+                renderLoginDots(); renderLoginPreview();
+            }
+        };
+        window.doLogout = () => {
+            if (!confirm('ออกจากระบบ?')) return;
+            localStorage.removeItem('pea_session');
+            currentUser = null;
+            _loginBuffer = '';
+            renderLoginDots(); renderLoginPreview();
+            document.getElementById('nav-user').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+        };
+        // Auto-restore session
+        const restoreSession = () => {
+            try {
+                const s = localStorage.getItem('pea_session');
+                if (s) {
+                    const u = JSON.parse(s);
+                    if (u && USERS[u.code]) {
+                        currentUser = u;
+                        const sn = u.name.replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'');
+                        document.getElementById('nav-user-name').innerHTML =
+                            sn + (u.code === ADMIN_CODE ? ' <span style="background:#7c3aed;color:white;font-size:9px;padding:1px 5px;border-radius:6px;font-weight:900;vertical-align:middle;">ADMIN</span>' : '');
+                        document.getElementById('nav-user').classList.remove('hidden');
+                        document.getElementById('login-screen').classList.add('hidden');
+                        return true;
+                    }
+                }
+            } catch {}
+            renderLoginDots();
+            return false;
+        };
+
+        // ══════════════════════════════════════════════════════════
+        // TEAM MANAGER
+        // ══════════════════════════════════════════════════════════
+        window.openTeamModal = () => {
+            const container = document.getElementById('team-rows');
+            container.innerHTML = TEAMS.map((t, i) => `
+                <div class="team-row">
+                    <span class="text-xs font-black text-slate-300 w-10 text-right">${t.id}</span>
+                    <input value="${t.name}" data-idx="${i}" class="team-name-input" placeholder="ชื่อทีม">
+                    <button class="del-team" onclick="delTeamRow(${i})">✕</button>
+                </div>`).join('');
+            openModal('teamModal');
+        };
+        window.delTeamRow = (idx) => {
+            if (!confirm('ลบทีมนี้?')) return;
+            TEAMS.splice(idx, 1);
+            openTeamModal();
+        };
+        window.addTeamRow = () => {
+            const nextNum = TEAMS.length + 1;
+            TEAMS.push({ id: `T${String(nextNum).padStart(2,'0')}`, name: '' });
+            openTeamModal();
+            setTimeout(() => {
+                const inputs = document.querySelectorAll('.team-name-input');
+                if (inputs.length) inputs[inputs.length-1].focus();
+            }, 50);
+        };
+        window.saveTeamsModal = () => {
+            document.querySelectorAll('.team-name-input').forEach((inp, i) => {
+                if (TEAMS[i]) TEAMS[i].name = inp.value.trim();
+            });
+            TEAMS = TEAMS.filter(t => t.name);
+            saveTeams(TEAMS);
+            // Refresh team dropdown
+            document.getElementById('field-team').innerHTML = `<option value="">เลือกสายงาน...</option>` + TEAMS.map(t => `<option value="${t.id}">${t.id}: ${t.name}</option>`).join('');
+            closeModal('teamModal');
+            scheduleRender();
+        };
+        window.resetTeams = () => {
+            if (!confirm('รีเซ็ตกลับค่าเริ่มต้น?')) return;
+            TEAMS = JSON.parse(JSON.stringify(DEFAULT_TEAMS));
+            saveTeams(TEAMS);
+            openTeamModal();
+        };
+
+        // ══════════════════════════════════════════════════════════
+        // HOLIDAY EDITOR
+        // ══════════════════════════════════════════════════════════
+        const DEFAULT_HOLIDAYS_JSON = JSON.stringify(THAI_HOLIDAYS);
+        const loadHolidays = () => { try { const s = localStorage.getItem('pea_holidays'); return s ? JSON.parse(s) : null; } catch { return null; } };
+        // Override THAI_HOLIDAYS with saved user holidays if available
+        (() => { const h = loadHolidays(); if (h) Object.keys(THAI_HOLIDAYS).forEach(k => delete THAI_HOLIDAYS[k]); if (h) Object.assign(THAI_HOLIDAYS, h); })();
+
+        window.openHolidayModal = () => {
+            const editor = document.getElementById('holiday-editor');
+            const entries = Object.entries(THAI_HOLIDAYS).sort((a,b) => a[0].localeCompare(b[0]));
+            editor.innerHTML = entries.map(([date, name]) => `
+                <div class="holiday-row">
+                    <input type="date" class="h-date" value="${date}">
+                    <input type="text" class="h-name" value="${name}" placeholder="ชื่อวันหยุด">
+                    <button class="del-h" onclick="this.closest('.holiday-row').remove()">✕</button>
+                </div>`).join('');
+            openModal('holidayModal');
+        };
+        window.addHolidayRow = () => {
+            const editor = document.getElementById('holiday-editor');
+            const today = new Date().toISOString().slice(0,10);
+            editor.insertAdjacentHTML('beforeend', `
+                <div class="holiday-row">
+                    <input type="date" class="h-date" value="${today}">
+                    <input type="text" class="h-name" placeholder="ชื่อวันหยุด">
+                    <button class="del-h" onclick="this.closest('.holiday-row').remove()">✕</button>
+                </div>`);
+            editor.lastElementChild.querySelector('.h-name').focus();
+        };
+        window.saveHolidaysModal = () => {
+            const newH = {};
+            document.querySelectorAll('.holiday-row').forEach(row => {
+                const d = row.querySelector('.h-date').value;
+                const n = row.querySelector('.h-name').value.trim();
+                if (d && n) newH[d] = n;
+            });
+            // Overwrite THAI_HOLIDAYS in place
+            Object.keys(THAI_HOLIDAYS).forEach(k => delete THAI_HOLIDAYS[k]);
+            Object.assign(THAI_HOLIDAYS, newH);
+            localStorage.setItem('pea_holidays', JSON.stringify(newH));
+            closeModal('holidayModal');
+            scheduleRender();
+            showRealtimeToast('บันทึกวันหยุดแล้ว 📅', '✅');
+        };
+        window.resetHolidays = () => {
+            if (!confirm('รีเซ็ตวันหยุดกลับค่าเริ่มต้น?')) return;
+            localStorage.removeItem('pea_holidays');
+            Object.keys(THAI_HOLIDAYS).forEach(k => delete THAI_HOLIDAYS[k]);
+            Object.assign(THAI_HOLIDAYS, JSON.parse(DEFAULT_HOLIDAYS_JSON));
+            openHolidayModal();
+        };
+
         init();
+        restoreSession();
         setTimeout(updateNotifBadge, 1500);
         // ── Deep-link handler ──────────────────────────────────────
         // Reads ?task=TASK_ID&date=YYYY-MM-DD from URL and jumps there
@@ -2573,9 +2991,9 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             แก้ไขงาน
         </button>
-        <button class="task-popup-btn del" onclick="popupAction('delete')">
+        <button class="task-popup-btn del" id="popup-del-btn" onclick="popupAction('delete')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-            ลบงาน
+            <span id="popup-del-label">ลบงาน</span>
         </button>
     </div>
 
