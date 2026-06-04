@@ -120,6 +120,21 @@
         .task-chip-done { background: #f0fdf4; color: #166534; border-left-color: #10b981; }
         .more-tasks { font-size: 8px; color: #7c3aed; font-weight: 800; text-align: center; cursor: pointer; padding: 1px; background: #f5f3ff; border-radius: 4px; }
 
+        .admin-tab { transition: all 0.15s; cursor: pointer; }
+        .admin-tab.active { border-color: #7c3aed !important; color: #7c3aed !important; }
+
+        /* ── Admin Panel ─────────────────────────────────────── */
+        #admin-panel { display:none; }
+        #admin-panel.active { display:block; }
+        .log-row { display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:start; padding:10px 0; border-bottom:1px solid #f1f5f9; font-size:12px; }
+        .log-action-badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:8px; font-weight:900; font-size:10px; white-space:nowrap; }
+        .log-action-badge.add_task    { background:#dcfce7; color:#16a34a; }
+        .log-action-badge.edit_task   { background:#dbeafe; color:#2563eb; }
+        .log-action-badge.delete_task { background:#fee2e2; color:#dc2626; }
+        .log-action-badge.update_status { background:#fef9c3; color:#ca8a04; }
+        .log-action-badge.login       { background:#f3e8ff; color:#9333ea; }
+        .quota-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:16px; padding:14px 16px; }
+
         /* ── Login Screen ───────────────────────────────────── */
         #login-screen { position:fixed; inset:0; background:linear-gradient(135deg,#4c1d95 0%,#7c3aed 50%,#a855f7 100%); z-index:200; display:flex; align-items:center; justify-content:center; padding:20px; }
         #login-screen.hidden { display:none; }
@@ -308,6 +323,59 @@
 </head>
 <body>
 
+    <!-- ═══ ADMIN PANEL MODAL ════════════════════════════════════ -->
+    <div id="adminModal" class="modal-overlay">
+        <div class="modal-content" style="max-width:680px;">
+            <div class="p-5 border-b flex justify-between items-center" style="background:linear-gradient(135deg,#1e1b4b,#4c1d95);">
+                <div class="flex items-center gap-3">
+                    <span style="font-size:22px;">👑</span>
+                    <div>
+                        <h3 class="text-lg font-black text-white">Admin Panel</h3>
+                        <p class="text-[11px] text-purple-200 font-bold">นายศุภชัย จันทร์ครุฑ · รหัส 489961</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('adminModal')" class="p-2 hover:bg-white/10 rounded-full text-white"><i data-lucide="x"></i></button>
+            </div>
+            <!-- Tab bar -->
+            <div class="flex border-b bg-slate-50 text-sm font-black">
+                <button onclick="adminTab('log')" id="atab-log" class="admin-tab px-5 py-3 border-b-2 border-purple-600 text-purple-700">📋 Activity Log</button>
+                <button onclick="adminTab('quota')" id="atab-quota" class="admin-tab px-5 py-3 border-b-2 border-transparent text-slate-400">📊 Quota ผู้ใช้</button>
+                <button onclick="adminTab('stats')" id="atab-stats" class="admin-tab px-5 py-3 border-b-2 border-transparent text-slate-400">📈 สถิติ</button>
+            </div>
+            <!-- Log tab -->
+            <div id="apanel-log" class="p-5">
+                <div class="flex gap-3 mb-4 flex-wrap">
+                    <select id="log-filter-action" onchange="loadAdminLogs()" class="text-xs border border-slate-200 rounded-xl px-3 py-2 outline-none font-bold">
+                        <option value="">ทุกประเภท</option>
+                        <option value="add_task">เพิ่มงาน</option>
+                        <option value="edit_task">แก้ไขงาน</option>
+                        <option value="delete_task">ลบงาน</option>
+                        <option value="update_status">อัปเดตสถานะ</option>
+                        <option value="edit_holidays">แก้ไขวันหยุด</option>
+                        <option value="login">เข้าสู่ระบบ</option>
+                    </select>
+                    <select id="log-filter-user" onchange="loadAdminLogs()" class="text-xs border border-slate-200 rounded-xl px-3 py-2 outline-none font-bold flex-1 min-w-0">
+                        <option value="">ทุกคน</option>
+                    </select>
+                    <button onclick="loadAdminLogs()" class="px-4 py-2 brand-primary text-white rounded-xl text-xs font-black">🔄 โหลด</button>
+                </div>
+                <div id="admin-log-list" class="space-y-0 max-h-[50vh] overflow-y-auto">
+                    <p class="text-slate-400 text-sm text-center py-8 font-bold">กดโหลดเพื่อดู log</p>
+                </div>
+            </div>
+            <!-- Quota tab -->
+            <div id="apanel-quota" class="p-5 hidden">
+                <p class="text-xs text-slate-400 font-bold mb-4">โควต้าลบงานของแต่ละคนวันนี้ — กดรีเซ็ตเพื่อปลดล็อค</p>
+                <div id="admin-quota-list"></div>
+                <button onclick="adminResetAllQuota()" class="mt-4 w-full py-2.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-sm font-black hover:bg-rose-100">🔓 รีเซ็ต Quota ทุกคน</button>
+            </div>
+            <!-- Stats tab -->
+            <div id="apanel-stats" class="p-5 hidden">
+                <div id="admin-stats-content" class="grid grid-cols-2 gap-4"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- ═══ LOGIN SCREEN ════════════════════════════════════════════ -->
     <div id="login-screen">
         <div class="login-box">
@@ -414,6 +482,7 @@
                 <!-- Team & Holiday quick buttons -->
                 <button onclick="openTeamModal()" title="จัดการทีม" class="p-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm hover:bg-slate-200 transition-all" style="font-size:16px;">👥</button>
                 <button onclick="openHolidayModal()" title="แก้ไขวันหยุด" class="p-2.5 bg-amber-50 text-amber-600 rounded-xl text-sm hover:bg-amber-100 transition-all" style="font-size:16px;">📅</button>
+                <button id="admin-panel-btn" onclick="openAdminPanel()" title="Admin Panel" class="hidden p-2.5 rounded-xl text-sm transition-all" style="font-size:16px;background:linear-gradient(135deg,#4c1d95,#7c3aed);color:white;">👑</button>
                 <button id="install-btn" onclick="installApp()" class="hidden items-center gap-1.5 px-3 py-2 bg-purple-100 text-purple-700 rounded-xl text-xs font-bold hover:bg-purple-200 transition-all border border-purple-200">
                     <i data-lucide="download" class="w-3.5 h-3.5"></i>
                     <span class="hidden sm:inline">ติดตั้งแอป</span>
@@ -1180,6 +1249,7 @@
                 if (!window._notifFired) { window._notifFired = true; setTimeout(runAutoNotify, 800); }
             });
             startNotesSync();
+            startHolidaySync();
         };
 
         window.renderContent = () => {
@@ -1403,6 +1473,11 @@
         window.openEditTaskModal = (id) => {
             const task = tasks.find(t => t.id === id);
             if (!task) return;
+            if (!canEditTask(task)) {
+                const creator = task.createdByName || `รหัส ${task.createdBy}` || 'ไม่ทราบ';
+                alert(`⛔ ไม่มีสิทธิ์แก้ไขงานนี้\n\nงานนี้สร้างโดย: ${creator}\nคุณสามารถแก้ไขได้เฉพาะงานที่คุณสร้าง หรือติดต่อ Admin (489961)`);
+                return;
+            }
             document.getElementById('assign-modal-title').innerText = "แก้ไขภารกิจ";
             document.getElementById('field-id').value = task.id;
             document.getElementById('field-team').value = task.teamId;
@@ -1458,9 +1533,18 @@
 
         window.handleSaveTask = async (e) => {
             e.preventDefault();
+            if (!currentUser) { alert('กรุณาเข้าสู่ระบบก่อน'); return; }
             const btn = document.getElementById('btn-submit');
             btn.disabled = true; btn.innerText = "กำลังบันทึก...";
             const id = document.getElementById('field-id').value;
+            // Permission check for edit
+            if (id) {
+                const existing = tasks.find(t => t.id === id);
+                if (existing && !canEditTask(existing)) {
+                    alert('⛔ คุณไม่มีสิทธิ์แก้ไขงานนี้\nสามารถแก้ไขได้เฉพาะงานที่คุณเป็นผู้สร้าง\nหรือติดต่อ Admin');
+                    btn.disabled = false; btn.innerText = "บันทึกภารกิจ"; return;
+                }
+            }
             const files = Array.from(document.getElementById('field-files').files);
             try {
                 const data = {
@@ -1476,8 +1560,17 @@
                     const existing = id ? parseFiles(task?.files_v2) : [];
                     data.files_v2 = JSON.stringify([...existing, ...processedNew]);
                 }
-                if (id) await updateDoc(doc(db, 'tasks', id), data);
-                else { data.status = 'pending'; data.createdAt = serverTimestamp(); await addDoc(collection(db, 'tasks'), data); }
+                if (id) {
+                    await updateDoc(doc(db, 'tasks', id), data);
+                    await writeLog('edit_task', { taskId: id, taskTitle: data.title });
+                } else {
+                    data.status = 'pending';
+                    data.createdAt = serverTimestamp();
+                    data.createdBy = currentUser.code;
+                    data.createdByName = currentUser.name;
+                    const ref = await addDoc(collection(db, 'tasks'), data);
+                    await writeLog('add_task', { taskId: ref.id, taskTitle: data.title, teamId: data.teamId, date: data.date });
+                }
                 closeModal('assignModal');
                 document.getElementById('taskForm').reset();
             } catch(err) { alert(err.message); }
@@ -1486,6 +1579,7 @@
 
         window.handleUpdateStatus = async (e) => {
             e.preventDefault();
+            if (!canUpdateStatus()) { alert('กรุณาเข้าสู่ระบบก่อน'); return; }
             const btn = document.getElementById('btn-report-submit');
             btn.disabled = true; btn.innerText = "กำลังส่ง...";
             const id = document.getElementById('report-task-id').value;
@@ -1493,7 +1587,9 @@
             try {
                 const updateData = {
                     status: document.getElementById('report-status').value,
-                    reportNote: document.getElementById('report-note').value
+                    reportNote: document.getElementById('report-note').value,
+                    lastUpdatedBy: currentUser.code,
+                    lastUpdatedByName: currentUser.name,
                 };
                 if (files.length > 0) {
                     const processedNew = await Promise.all(files.map(f => processFile(f)));
@@ -1502,6 +1598,8 @@
                     updateData.reportFiles_v2 = JSON.stringify([...existing, ...processedNew]);
                 }
                 await updateDoc(doc(db, 'tasks', id), updateData);
+                const task = tasks.find(t => t.id === id);
+                await writeLog('update_status', { taskId: id, taskTitle: task?.title || '', newStatus: updateData.status });
                 closeModal('reportModal');
                 document.getElementById('reportForm').reset();
             } catch(err) { alert(err.message); }
@@ -1730,6 +1828,30 @@
         };
         window.moveMonth = d => { currentMonth.setMonth(currentMonth.getMonth()+d); _calCache.key = ''; renderContent(); };
         // ════════════════════════════════════════════════════════
+        // AUDIT LOG SYSTEM
+        // ════════════════════════════════════════════════════════
+        const writeLog = async (action, detail = {}) => {
+            if (!currentUser) return;
+            try {
+                await addDoc(collection(db, 'audit_logs'), {
+                    action,          // 'add_task' | 'edit_task' | 'delete_task' | 'update_status' | 'login'
+                    userCode: currentUser.code,
+                    userName: currentUser.name,
+                    ts: serverTimestamp(),
+                    ...detail
+                });
+            } catch (e) { console.warn('Log write failed', e); }
+        };
+
+        // ════════════════════════════════════════════════════════
+        // PERMISSION GUARDS
+        // ════════════════════════════════════════════════════════
+        // User สามารถแก้ไขงานได้ถ้า: เป็น Admin หรือเป็นคนสร้าง
+        const canEditTask = (task) => isAdmin() || task.createdBy === currentUser?.code;
+        // User อัปเดตสถานะได้ทุกงาน (เพราะอาจเป็นทีมงาน)
+        const canUpdateStatus = () => !!currentUser;
+
+        // ════════════════════════════════════════════════════════
         // ROLE & DELETE QUOTA SYSTEM
         // ════════════════════════════════════════════════════════
         const ADMIN_CODE = '489961';
@@ -1737,20 +1859,21 @@
 
         // User quota: max 3 deletes per calendar day (stored in localStorage)
         const DELETE_QUOTA_MAX = 3;
+        const _quotaKey = () => `pea_del_quota_${currentUser?.code || 'guest'}`;
         const getDeleteQuota = () => {
             try {
                 const today = new Date().toISOString().slice(0,10);
-                const raw = localStorage.getItem('pea_del_quota');
+                const raw = localStorage.getItem(_quotaKey());
                 if (!raw) return { date: today, count: 0 };
                 const q = JSON.parse(raw);
-                if (q.date !== today) return { date: today, count: 0 }; // reset daily
+                if (q.date !== today) return { date: today, count: 0 };
                 return q;
             } catch { return { date: new Date().toISOString().slice(0,10), count: 0 }; }
         };
         const incDeleteQuota = () => {
             const q = getDeleteQuota();
             q.count++;
-            localStorage.setItem('pea_del_quota', JSON.stringify(q));
+            localStorage.setItem(_quotaKey(), JSON.stringify(q));
         };
 
         window.handleDeleteTask = async (id) => {
@@ -1788,6 +1911,7 @@
                 for (const f of allFiles) {
                     if (f.path) await deleteObject(sRef(storage, f.path)).catch(() => {});
                 }
+                await writeLog('delete_task', { taskId: id, taskTitle: task.title, teamId: task.teamId, date: task.date });
             }
             await deleteDoc(doc(db, 'tasks', id));
             if (!isAdmin()) incDeleteQuota();
@@ -2730,8 +2854,10 @@
                 document.getElementById('nav-user-name').innerHTML =
                     shortName + (isAdminUser ? ' <span style="background:#7c3aed;color:white;font-size:9px;padding:1px 5px;border-radius:6px;font-weight:900;vertical-align:middle;">ADMIN</span>' : '');
                 document.getElementById('nav-user').classList.remove('hidden');
+                document.getElementById('admin-panel-btn').classList.toggle('hidden', !isAdminUser);
                 document.getElementById('login-screen').classList.add('hidden');
                 localStorage.setItem('pea_session', JSON.stringify(currentUser));
+                await writeLog('login', {});
                 _loginBuffer = '';
             } else {
                 document.getElementById('login-error').textContent = '❌ ไม่พบรหัสพนักงาน กรุณาตรวจสอบอีกครั้ง';
@@ -2746,6 +2872,7 @@
             _loginBuffer = '';
             renderLoginDots(); renderLoginPreview();
             document.getElementById('nav-user').classList.add('hidden');
+            document.getElementById('admin-panel-btn').classList.add('hidden');
             document.getElementById('login-screen').classList.remove('hidden');
         };
         // Auto-restore session
@@ -2760,6 +2887,7 @@
                         document.getElementById('nav-user-name').innerHTML =
                             sn + (u.code === ADMIN_CODE ? ' <span style="background:#7c3aed;color:white;font-size:9px;padding:1px 5px;border-radius:6px;font-weight:900;vertical-align:middle;">ADMIN</span>' : '');
                         document.getElementById('nav-user').classList.remove('hidden');
+                        document.getElementById('admin-panel-btn').classList.toggle('hidden', u.code !== ADMIN_CODE);
                         document.getElementById('login-screen').classList.add('hidden');
                         return true;
                     }
@@ -2818,11 +2946,21 @@
         // HOLIDAY EDITOR
         // ══════════════════════════════════════════════════════════
         const DEFAULT_HOLIDAYS_JSON = JSON.stringify(THAI_HOLIDAYS);
-        const loadHolidays = () => { try { const s = localStorage.getItem('pea_holidays'); return s ? JSON.parse(s) : null; } catch { return null; } };
-        // Override THAI_HOLIDAYS with saved user holidays if available
-        (() => { const h = loadHolidays(); if (h) Object.keys(THAI_HOLIDAYS).forEach(k => delete THAI_HOLIDAYS[k]); if (h) Object.assign(THAI_HOLIDAYS, h); })();
+
+        // ── Holiday: sync จาก Firestore (Admin แก้ → ทุกเครื่องเปลี่ยน) ──
+        const startHolidaySync = () => {
+            onSnapshot(doc(db, 'settings', 'holidays'), snap => {
+                if (snap.exists()) {
+                    const h = snap.data().data || {};
+                    Object.keys(THAI_HOLIDAYS).forEach(k => delete THAI_HOLIDAYS[k]);
+                    Object.assign(THAI_HOLIDAYS, h);
+                    scheduleRender();
+                }
+            });
+        };
 
         window.openHolidayModal = () => {
+            if (!isAdmin()) { alert('⛔ เฉพาะ Admin เท่านั้นที่แก้ไขวันหยุดได้\nติดต่อ Admin (489961)'); return; }
             const editor = document.getElementById('holiday-editor');
             const entries = Object.entries(THAI_HOLIDAYS).sort((a,b) => a[0].localeCompare(b[0]));
             editor.innerHTML = entries.map(([date, name]) => `
@@ -2844,27 +2982,159 @@
                 </div>`);
             editor.lastElementChild.querySelector('.h-name').focus();
         };
-        window.saveHolidaysModal = () => {
+        window.saveHolidaysModal = async () => {
+            if (!isAdmin()) return;
             const newH = {};
             document.querySelectorAll('.holiday-row').forEach(row => {
                 const d = row.querySelector('.h-date').value;
                 const n = row.querySelector('.h-name').value.trim();
                 if (d && n) newH[d] = n;
             });
-            // Overwrite THAI_HOLIDAYS in place
-            Object.keys(THAI_HOLIDAYS).forEach(k => delete THAI_HOLIDAYS[k]);
-            Object.assign(THAI_HOLIDAYS, newH);
-            localStorage.setItem('pea_holidays', JSON.stringify(newH));
-            closeModal('holidayModal');
-            scheduleRender();
-            showRealtimeToast('บันทึกวันหยุดแล้ว 📅', '✅');
+            try {
+                const { setDoc } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+                await setDoc(doc(db, 'settings', 'holidays'), { data: newH, updatedBy: currentUser.name, updatedAt: serverTimestamp() });
+                await writeLog('edit_holidays', { count: Object.keys(newH).length });
+                closeModal('holidayModal');
+                showRealtimeToast('บันทึกวันหยุดแล้ว — ทุกเครื่องอัปเดต 📅', '✅');
+            } catch (e) { alert('บันทึกไม่สำเร็จ: ' + e.message); }
         };
-        window.resetHolidays = () => {
+        window.resetHolidays = async () => {
+            if (!isAdmin()) return;
             if (!confirm('รีเซ็ตวันหยุดกลับค่าเริ่มต้น?')) return;
-            localStorage.removeItem('pea_holidays');
-            Object.keys(THAI_HOLIDAYS).forEach(k => delete THAI_HOLIDAYS[k]);
-            Object.assign(THAI_HOLIDAYS, JSON.parse(DEFAULT_HOLIDAYS_JSON));
-            openHolidayModal();
+            try {
+                const { setDoc } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+                const orig = JSON.parse(DEFAULT_HOLIDAYS_JSON);
+                await setDoc(doc(db, 'settings', 'holidays'), { data: orig, updatedBy: currentUser.name, updatedAt: serverTimestamp() });
+                openHolidayModal();
+            } catch (e) { alert(e.message); }
+        };
+
+        // ══════════════════════════════════════════════════════════
+        // ADMIN PANEL
+        // ══════════════════════════════════════════════════════════
+        const ACTION_LABEL = {
+            add_task:     { th: '➕ เพิ่มงาน',         cls: 'add_task' },
+            edit_task:    { th: '✏️ แก้ไขงาน',        cls: 'edit_task' },
+            delete_task:  { th: '🗑️ ลบงาน',           cls: 'delete_task' },
+            update_status:{ th: '🔄 อัปเดตสถานะ',     cls: 'update_status' },
+            edit_holidays:{ th: '📅 แก้ไขวันหยุด',    cls: 'update_status' },
+            login:        { th: '🔑 เข้าสู่ระบบ',     cls: 'login' },
+        };
+
+        window.openAdminPanel = () => {
+            if (!isAdmin()) return;
+            openModal('adminModal');
+            adminTab('log');
+        };
+
+        window.adminTab = (tab) => {
+            ['log','quota','stats'].forEach(t => {
+                document.getElementById(`apanel-${t}`).classList.toggle('hidden', t !== tab);
+                document.getElementById(`atab-${t}`).classList.toggle('active', t === tab);
+                const border = t === tab ? '#7c3aed' : 'transparent';
+                const color  = t === tab ? '#7c3aed' : '#94a3b8';
+                document.getElementById(`atab-${t}`).style.borderBottomColor = border;
+                document.getElementById(`atab-${t}`).style.color = color;
+            });
+            if (tab === 'log') loadAdminLogs();
+            if (tab === 'quota') loadAdminQuota();
+            if (tab === 'stats') loadAdminStats();
+        };
+
+        window.loadAdminLogs = async () => {
+            const list = document.getElementById('admin-log-list');
+            list.innerHTML = '<p class="text-slate-400 text-sm text-center py-8">กำลังโหลด…</p>';
+            try {
+                const { query, orderBy, limit: fsLimit, where, getDocs } =
+                    await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+                const filterAction = document.getElementById('log-filter-action').value;
+                const filterUser   = document.getElementById('log-filter-user').value;
+                let q = query(collection(db, 'audit_logs'), orderBy('ts','desc'), fsLimit(120));
+                if (filterAction) q = query(collection(db,'audit_logs'), where('action','==',filterAction), orderBy('ts','desc'), fsLimit(80));
+                if (filterUser)   q = query(collection(db,'audit_logs'), where('userCode','==',filterUser), orderBy('ts','desc'), fsLimit(80));
+                const snap = await getDocs(q);
+
+                // Populate user filter
+                const userSet = new Set();
+                snap.docs.forEach(d => userSet.add(d.data().userCode));
+                const sel = document.getElementById('log-filter-user');
+                const current = sel.value;
+                sel.innerHTML = '<option value="">ทุกคน</option>' +
+                    [...userSet].map(c => `<option value="${c}" ${c===current?'selected':''}>${USERS[c]||c}</option>`).join('');
+
+                if (snap.empty) { list.innerHTML = '<p class="text-slate-400 text-sm text-center py-8 font-bold">ไม่มีข้อมูล</p>'; return; }
+
+                list.innerHTML = snap.docs.map(d => {
+                    const log = d.data();
+                    const ts  = log.ts?.toDate ? log.ts.toDate() : new Date();
+                    const timeStr = ts.toLocaleString('th-TH', { day:'2-digit', month:'short', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+                    const ab = ACTION_LABEL[log.action] || { th: log.action, cls: 'login' };
+                    const detail = log.taskTitle ? `<br><span class="text-slate-400">${log.taskTitle}</span>` : (log.count ? `<br><span class="text-slate-400">${log.count} วันหยุด</span>` : '');
+                    return `<div class="log-row">
+                        <span class="log-action-badge ${ab.cls}">${ab.th}</span>
+                        <div class="font-bold text-slate-700 text-xs leading-tight">${USERS[log.userCode] || log.userCode}${detail}</div>
+                        <span class="text-[10px] text-slate-300 font-bold whitespace-nowrap">${timeStr}</span>
+                    </div>`;
+                }).join('');
+            } catch(e) { list.innerHTML = `<p class="text-rose-500 text-sm text-center py-8 font-bold">โหลดไม่สำเร็จ: ${e.message}</p>`; }
+        };
+
+        const loadAdminQuota = () => {
+            const container = document.getElementById('admin-quota-list');
+            const today = new Date().toISOString().slice(0,10);
+            // Collect all quota keys from localStorage across users (best-effort, device-local)
+            const rows = Object.entries(USERS).map(([code, name]) => {
+                let count = 0;
+                try {
+                    const raw = localStorage.getItem(`pea_del_quota_${code}`);
+                    if (raw) { const q = JSON.parse(raw); if (q.date === today) count = q.count; }
+                } catch {}
+                const pct = Math.round(count / DELETE_QUOTA_MAX * 100);
+                const color = count >= DELETE_QUOTA_MAX ? '#dc2626' : count > 0 ? '#f59e0b' : '#16a34a';
+                return `<div class="quota-card mb-2">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs font-black text-slate-700">${name.replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'')}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-black" style="color:${color}">${count}/${DELETE_QUOTA_MAX}</span>
+                            <button onclick="adminResetQuota('${code}')" class="text-[10px] px-2 py-0.5 bg-slate-100 rounded-lg font-bold hover:bg-rose-100 hover:text-rose-600">รีเซ็ต</button>
+                        </div>
+                    </div>
+                    <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div style="width:${pct}%;background:${color};height:100%;border-radius:999px;transition:width 0.3s"></div>
+                    </div>
+                </div>`;
+            }).join('');
+            container.innerHTML = `<p class="text-[10px] text-slate-400 font-bold mb-3">⚠️ Quota แสดงเฉพาะอุปกรณ์นี้ เนื่องจากเก็บใน localStorage ของแต่ละเครื่อง</p>` + rows;
+        };
+
+        window.adminResetQuota = (code) => {
+            localStorage.removeItem(`pea_del_quota_${code}`);
+            loadAdminQuota();
+            showRealtimeToast(`รีเซ็ต quota ${USERS[code]||code} แล้ว`, '🔓');
+        };
+        window.adminResetAllQuota = () => {
+            Object.keys(USERS).forEach(c => localStorage.removeItem(`pea_del_quota_${c}`));
+            // Reset own quota too
+            localStorage.removeItem('pea_del_quota');
+            loadAdminQuota();
+            showRealtimeToast('รีเซ็ต quota ทุกคนแล้ว 🔓', '✅');
+        };
+
+        const loadAdminStats = () => {
+            const total = tasks.length;
+            const byStatus = { pending:0, progress:0, done:0 };
+            tasks.forEach(t => { if (byStatus[t.status] !== undefined) byStatus[t.status]++; });
+            const byTeam = {};
+            tasks.forEach(t => { byTeam[t.teamId] = (byTeam[t.teamId]||0) + 1; });
+            const topTeam = Object.entries(byTeam).sort((a,b)=>b[1]-a[1]).slice(0,3);
+            document.getElementById('admin-stats-content').innerHTML = `
+                <div class="quota-card text-center"><div class="text-3xl font-black text-purple-700">${total}</div><div class="text-xs text-slate-400 font-bold mt-1">งานทั้งหมด</div></div>
+                <div class="quota-card text-center"><div class="text-3xl font-black text-emerald-600">${byStatus.done}</div><div class="text-xs text-slate-400 font-bold mt-1">เสร็จแล้ว ✅</div></div>
+                <div class="quota-card text-center"><div class="text-3xl font-black text-amber-500">${byStatus.progress}</div><div class="text-xs text-slate-400 font-bold mt-1">กำลังดำเนินการ</div></div>
+                <div class="quota-card text-center"><div class="text-3xl font-black text-slate-500">${byStatus.pending}</div><div class="text-xs text-slate-400 font-bold mt-1">รอดำเนินการ</div></div>
+                <div class="quota-card col-span-2"><div class="text-xs font-black text-slate-400 mb-2 uppercase">ทีมที่มีงานมากสุด</div>
+                    ${topTeam.map(([tid,cnt])=>`<div class="flex justify-between items-center py-1"><span class="text-xs font-bold text-slate-700">${TEAMS.find(t=>t.id===tid)?.name||tid}</span><span class="text-xs font-black text-purple-700">${cnt} งาน</span></div>`).join('')}
+                </div>`;
         };
 
         init();
