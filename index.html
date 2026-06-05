@@ -449,6 +449,30 @@
                 <button onclick="adminTab('stats')" id="atab-stats" class="px-5 py-3 whitespace-nowrap border-b-2 border-transparent text-slate-400">📈 สถิติ</button>
             </div>
             <div id="apanel-log" class="p-4">
+                <!-- Firestore Rules helper banner -->
+                <div id="log-rules-banner" class="hidden mb-3 p-3 bg-orange-50 border border-orange-200 rounded-2xl text-xs font-bold text-orange-800">
+                    <div class="flex items-start gap-2">
+                        <span class="text-lg flex-shrink-0">⚠️</span>
+                        <div class="w-full">
+                            <div class="font-black mb-1 text-sm">ต้องแก้ Firestore Security Rules ก่อน</div>
+                            <div class="text-orange-600 mb-2">
+                                ไปที่ <a href="https://console.firebase.google.com/project/pea-task-manager/firestore/rules" target="_blank" class="underline font-black">Firebase Console → Firestore → Rules</a> แล้วใส่ค่านี้:
+                            </div>
+                            <div class="relative">
+                                <pre id="rules-code" class="bg-white border border-orange-200 rounded-xl p-3 text-[10px] font-mono overflow-x-auto whitespace-pre select-all">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}</pre>
+                                <button onclick="copyRules()" class="absolute top-2 right-2 bg-orange-500 text-white text-[9px] font-black px-2 py-1 rounded-lg hover:bg-orange-600">📋 คัดลอก</button>
+                            </div>
+                            <div class="mt-2 text-orange-500">หลังแก้ Rules แล้ว กด Publish จากนั้นลองเพิ่ม/ลบงานใหม่</div>
+                        </div>
+                    </div>
+                </div>
                 <div class="flex gap-2 mb-3 flex-wrap">
                     <select id="log-filter-action" onchange="loadAdminLogs()" class="text-xs border border-slate-200 rounded-xl px-3 py-2 outline-none font-bold">
                         <option value="">ทุกประเภท</option>
@@ -1177,8 +1201,8 @@
             try {
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app); db = getFirestore(app); storage = getStorage(app);
-                // Expose Firestore helpers for holiday sync
-                window._fsRefs = { doc, setDoc };
+                // Expose Firestore helpers for holiday/users sync
+                window._fsRefs = { doc, setDoc, onSnapshot, collection };
 
                 // Timeout 10s
                 const authPromise = signInAnonymously(auth);
@@ -1584,6 +1608,61 @@
             else renderFilePreviews(updatedFiles, 'report-previews', 'reportFiles_v2', taskId);
         };
 
+        // ════════════════════════════════════════════════════════
+        // AUDIT LOG — บันทึกทุกการกระทำลง Firestore
+        // ════════════════════════════════════════════════════════
+        const writeLog = (action, detail = {}) => {
+            if (!currentUser || !db) return;
+            const payload = {
+                action,
+                userCode: currentUser.code,
+                userName: currentUser.name,
+                tsMs: Date.now(),
+                ts: serverTimestamp(),
+                ...detail
+            };
+            addDoc(collection(db, 'audit_logs'), payload)
+                .then(ref => {
+                    console.log(`[Log OK] ${action} → ${ref.id}`);
+                    window._logWorking = true;
+                })
+                .catch(err => {
+                    console.error(`[Log FAIL] ${action}:`, err.code, err.message);
+                    window._logWorking = false;
+                    if (!window._logRuleWarned) {
+                        window._logRuleWarned = true;
+                        if (typeof showRealtimeToast === 'function') {
+                            showRealtimeToast('⚠️ Firestore Rules ยังไม่อนุญาต audit_logs — กรุณาแก้ Rules', '🔐');
+                        }
+                    }
+                });
+        };
+
+        // ทดสอบ permission ของ audit_logs ทันทีหลัง login
+        const testLogPermission = () => {
+            addDoc(collection(db, 'audit_logs'), {
+                action: '__test__',
+                userCode: currentUser?.code || 'test',
+                tsMs: Date.now(),
+                ts: serverTimestamp()
+            }).then(ref => {
+                // ลบ test doc ทิ้งทันที
+                deleteDoc(doc(db, 'audit_logs', ref.id)).catch(() => {});
+                window._logWorking = true;
+                console.log('[Log] audit_logs permission: OK');
+            }).catch(err => {
+                window._logWorking = false;
+                window._logRuleWarned = true;
+                console.error('[Log] audit_logs permission DENIED:', err.message);
+                // แสดง banner ทันทีใน Admin Panel ถ้าเปิดอยู่
+                const banner = document.getElementById('log-rules-banner');
+                if (banner) banner.classList.remove('hidden');
+                if (typeof showRealtimeToast === 'function') {
+                    showRealtimeToast('🔐 Firestore Rules ต้องแก้ไข — ดูวิธีใน Admin Panel', '⚠️');
+                }
+            });
+        };
+
         window.handleSaveTask = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-submit');
@@ -1604,8 +1683,17 @@
                     const existing = id ? parseFiles(task?.files_v2) : [];
                     data.files_v2 = JSON.stringify([...existing, ...processedNew]);
                 }
-                if (id) await updateDoc(doc(db, 'tasks', id), data);
-                else { data.status = 'pending'; data.createdAt = serverTimestamp(); await addDoc(collection(db, 'tasks'), data); }
+                if (id) {
+                    await updateDoc(doc(db, 'tasks', id), data);
+                    writeLog('edit_task', { taskId: id, taskTitle: data.title, teamId: data.teamId });
+                } else {
+                    data.status = 'pending';
+                    data.createdAt = serverTimestamp();
+                    data.createdBy = currentUser?.code || '';
+                    data.createdByName = currentUser?.name || '';
+                    const ref = await addDoc(collection(db, 'tasks'), data);
+                    writeLog('add_task', { taskId: ref.id, taskTitle: data.title, teamId: data.teamId, date: data.date });
+                }
                 closeModal('assignModal');
                 document.getElementById('taskForm').reset();
             } catch(err) { alert(err.message); }
@@ -1630,6 +1718,13 @@
                     updateData.reportFiles_v2 = JSON.stringify([...existing, ...processedNew]);
                 }
                 await updateDoc(doc(db, 'tasks', id), updateData);
+                const task = tasks.find(t => t.id === id);
+                writeLog('update_status', {
+                    taskId: id,
+                    taskTitle: task?.title || '',
+                    newStatus: updateData.status,
+                    teamId: task?.teamId || ''
+                });
                 closeModal('reportModal');
                 document.getElementById('reportForm').reset();
             } catch(err) { alert(err.message); }
@@ -1929,6 +2024,12 @@
                 for (const f of allFiles) {
                     if (f.path) await deleteObject(sRef(storage, f.path)).catch(() => {});
                 }
+                writeLog('delete_task', {
+                    taskId: id,
+                    taskTitle: task.title,
+                    teamId: task.teamId,
+                    date: task.date
+                });
             }
             await deleteDoc(doc(db, 'tasks', id));
             if (!isAdmin()) incDeleteQuota();
@@ -2880,6 +2981,8 @@
                 localStorage.setItem('pea_session', JSON.stringify(currentUser));
                 _loginBuffer = '';
                 renderLoginDots();
+                // ทดสอบ permission + บันทึก login log
+                setTimeout(() => { testLogPermission(); writeLog('login', {}); }, 800);
             } else {
                 document.getElementById('login-error').textContent = '❌ ไม่พบรหัสพนักงาน กรุณาตรวจสอบอีกครั้ง';
                 _loginBuffer = '';
@@ -2912,6 +3015,8 @@
                         const adminBtn = document.getElementById('admin-panel-btn');
                         if (adminBtn) adminBtn.classList.toggle('hidden', !isAdminUser);
                         document.getElementById('login-screen').classList.add('hidden');
+                        // ทดสอบ permission หลัง restore session
+                        setTimeout(() => testLogPermission(), 1200);
                         return true;
                     }
                 }
@@ -2978,18 +3083,20 @@
 
         // Start listening to Firestore holidays document (shared across all devices)
         const startHolidaySync = () => {
-            const { doc: fsDoc, onSnapshot: fsOnSnapshot, setDoc } = window._fsRefs;
+            const { doc: fsDoc, onSnapshot: fsOnSnapshot } = window._fsRefs;
+            if (!fsOnSnapshot) { console.warn('_fsRefs.onSnapshot not ready'); return; }
             const holidayRef = fsDoc(db, 'config', 'holidays');
             fsOnSnapshot(holidayRef, snap => {
                 if (snap.exists()) {
                     const data = snap.data();
-                    if (data && data.map) {
-                        applyHolidays(data.map);
-                        _calCache.key = ''; // invalidate cache so calendar re-renders
+                    const map = data?.map || data?.data || null;
+                    if (map && typeof map === 'object') {
+                        applyHolidays(map);
+                        _calCache.key = '';
                         scheduleRender();
                     }
                 }
-            });
+            }, err => console.warn('Holiday sync error:', err.message));
         };
 
         window.openHolidayModal = () => {
@@ -3073,25 +3180,47 @@
             if (tab === 'stats') loadAdminStats();
         };
 
+        window.copyRules = () => {
+            const text = document.getElementById('rules-code')?.textContent || '';
+            navigator.clipboard.writeText(text).then(() => {
+                showRealtimeToast('คัดลอก Rules แล้ว — ไปวางใน Firebase Console', '📋');
+            }).catch(() => {
+                // fallback select
+                const el = document.getElementById('rules-code');
+                if (el) { const r = document.createRange(); r.selectNode(el); window.getSelection().removeAllRanges(); window.getSelection().addRange(r); }
+            });
+        };
+
         window.loadAdminLogs = async () => {
             const list = document.getElementById('admin-log-list');
+            const banner = document.getElementById('log-rules-banner');
             list.innerHTML = '<p class="text-slate-400 text-sm text-center py-8">กำลังโหลด…</p>';
+            // แสดง banner ทันทีถ้าทราบแล้วว่า permission fail
+            if (banner) banner.classList.toggle('hidden', window._logWorking !== false);
             try {
-                const { query, orderBy, limit: fsLimit, where, getDocs } =
+                const { query, limit: fsLimit, getDocs } =
                     await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
-                const filterAction = document.getElementById('log-filter-action')?.value || '';
-                let q = filterAction
-                    ? query(collection(db,'audit_logs'), where('action','==',filterAction), orderBy('ts','desc'), fsLimit(100))
-                    : query(collection(db,'audit_logs'), orderBy('ts','desc'), fsLimit(150));
+                const q = query(collection(db, 'audit_logs'), fsLimit(300));
                 const snap = await getDocs(q);
-                if (snap.empty) { list.innerHTML = '<p class="text-slate-400 text-sm text-center py-8 font-bold">ไม่มีข้อมูล</p>'; return; }
-                list.innerHTML = snap.docs.map(d => {
-                    const log = d.data();
-                    const ts  = log.ts?.toDate ? log.ts.toDate() : new Date();
+
+                const filterAction = document.getElementById('log-filter-action')?.value || '';
+                let docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                // กรองออก __test__ doc
+                docs = docs.filter(d => d.action !== '__test__');
+                docs.sort((a, b) => (b.tsMs || 0) - (a.tsMs || 0));
+                if (filterAction) docs = docs.filter(d => d.action === filterAction);
+
+                if (!docs.length) {
+                    if (window._logWorking === false && banner) banner.classList.remove('hidden');
+                    list.innerHTML = '<p class="text-slate-400 text-sm text-center py-6 font-bold">ไม่มีข้อมูล</p>';
+                    return;
+                }
+                list.innerHTML = docs.map(log => {
+                    const ts = log.tsMs ? new Date(log.tsMs) : (log.ts?.toDate ? log.ts.toDate() : new Date());
                     const timeStr = ts.toLocaleString('th-TH', { day:'2-digit', month:'short', year:'2-digit', hour:'2-digit', minute:'2-digit' });
-                    const ab = LOG_ACTION_LABEL[log.action] || { th: log.action, cls: 'login' };
-                    const detail = log.taskTitle ? `<span class="text-slate-400 block leading-tight">${log.taskTitle}</span>` : '';
-                    const uname = (USERS[log.userCode] || log.userCode || '').replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'');
+                    const ab = LOG_ACTION_LABEL[log.action] || { th: log.action || '?', cls: 'login' };
+                    const detail = log.taskTitle ? `<span class="text-slate-400 block leading-tight truncate max-w-[200px]">${log.taskTitle}</span>` : '';
+                    const uname = (USERS[log.userCode] || log.userName || log.userCode || '?').replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'');
                     return `<div class="log-row">
                         <span class="log-action-badge ${ab.cls}">${ab.th}</span>
                         <div class="font-bold text-slate-700 text-xs leading-tight">${uname}${detail}</div>
@@ -3099,7 +3228,11 @@
                     </div>`;
                 }).join('');
             } catch(e) {
-                list.innerHTML = `<p class="text-rose-500 text-sm text-center py-8 font-bold">โหลดไม่สำเร็จ: ${e.message}</p>`;
+                const isPermission = e.code === 'permission-denied' || e.message?.includes('permission');
+                if (banner) banner.classList.remove('hidden');
+                list.innerHTML = isPermission
+                    ? `<p class="text-orange-500 text-sm text-center py-4 font-bold">🔐 ยังไม่มีสิทธิ์ — แก้ Rules ตามด้านบน แล้วกดโหลดใหม่</p>`
+                    : `<p class="text-rose-500 text-sm text-center py-6 font-bold">โหลดไม่สำเร็จ: ${e.message}</p>`;
             }
         };
 
@@ -3172,22 +3305,21 @@
         // ══════════════════════════════════════════════════════════
         const startUsersSync = () => {
             const { doc: fsDoc, onSnapshot: fsOnSnapshot } = window._fsRefs;
+            if (!fsOnSnapshot) { console.warn('_fsRefs.onSnapshot not ready'); return; }
             const usersRef = fsDoc(db, 'config', 'users');
             fsOnSnapshot(usersRef, snap => {
                 if (snap.exists()) {
                     const data = snap.data();
-                    if (data && data.map && typeof data.map === 'object') {
-                        // Overwrite USERS in-place, keep ADMIN_CODE always
+                    const map = data?.map || data?.data || null;
+                    if (map && typeof map === 'object') {
                         Object.keys(USERS).forEach(k => delete USERS[k]);
-                        Object.assign(USERS, data.map);
-                        // Guarantee admin never gets removed
+                        Object.assign(USERS, map);
                         if (!USERS[ADMIN_CODE]) USERS[ADMIN_CODE] = DEFAULT_USERS[ADMIN_CODE];
                     }
                 } else {
-                    // First run: push defaults to Firestore
                     _pushDefaultUsers();
                 }
-            });
+            }, err => console.warn('Users sync error:', err.message));
         };
 
         const _pushDefaultUsers = async () => {
