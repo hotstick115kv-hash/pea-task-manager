@@ -121,6 +121,13 @@
         .more-tasks { font-size: 8px; color: #7c3aed; font-weight: 800; text-align: center; cursor: pointer; padding: 1px; background: #f5f3ff; border-radius: 4px; }
 
         /* ── Admin Panel ─────────────────────────────────────── */
+        .user-row { display:flex; align-items:center; gap:8px; padding:8px 10px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0; }
+        .user-row .user-code-badge { flex-shrink:0; font-size:10px; font-weight:900; background:#ede9fe; color:#6d28d9; padding:3px 8px; border-radius:8px; font-family:monospace; }
+        .user-row .user-name-inp { flex:1; min-width:0; border:1px solid transparent; border-radius:8px; padding:4px 8px; font-size:12px; font-weight:700; font-family:'Sarabun',sans-serif; background:transparent; outline:none; cursor:pointer; }
+        .user-row .user-name-inp:focus { border-color:#7c3aed; background:white; cursor:text; }
+        .user-row .admin-star { flex-shrink:0; font-size:14px; }
+        .user-row .del-user { flex-shrink:0; background:#fee2e2; border:none; color:#dc2626; border-radius:8px; padding:5px 9px; cursor:pointer; font-size:12px; font-weight:900; }
+        .user-row .del-user:hover { background:#fca5a5; }
         .log-row { display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:start; padding:10px 0; border-bottom:1px solid #f1f5f9; font-size:12px; }
         .log-action-badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:8px; font-weight:900; font-size:10px; white-space:nowrap; }
         .log-action-badge.add_task     { background:#dcfce7; color:#16a34a; }
@@ -438,6 +445,7 @@
             <div class="flex border-b bg-slate-50 text-sm font-black overflow-x-auto">
                 <button onclick="adminTab('log')" id="atab-log" class="px-5 py-3 whitespace-nowrap border-b-2 border-purple-600 text-purple-700">📋 Log</button>
                 <button onclick="adminTab('quota')" id="atab-quota" class="px-5 py-3 whitespace-nowrap border-b-2 border-transparent text-slate-400">📊 Quota</button>
+                <button onclick="adminTab('users')" id="atab-users" class="px-5 py-3 whitespace-nowrap border-b-2 border-transparent text-slate-400">👤 Users</button>
                 <button onclick="adminTab('stats')" id="atab-stats" class="px-5 py-3 whitespace-nowrap border-b-2 border-transparent text-slate-400">📈 สถิติ</button>
             </div>
             <div id="apanel-log" class="p-4">
@@ -460,6 +468,31 @@
                 <p class="text-xs text-slate-400 font-bold mb-3">โควต้าลบงานรายวันของแต่ละคน (เก็บในอุปกรณ์นี้)</p>
                 <div id="admin-quota-list" class="max-h-[52vh] overflow-y-auto"></div>
                 <button onclick="adminResetAllQuota()" class="mt-4 w-full py-2.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-sm font-black hover:bg-rose-100">🔓 รีเซ็ต Quota ทุกคน</button>
+            </div>
+
+            <!-- Users tab -->
+            <div id="apanel-users" class="p-4 hidden">
+                <div class="flex justify-between items-center mb-3">
+                    <p class="text-xs text-slate-400 font-bold">จัดการ User ที่เข้าใช้งานระบบ — sync ทุกเครื่องผ่าน Firestore</p>
+                    <span id="user-count-badge" class="text-xs font-black bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full"></span>
+                </div>
+                <!-- Add new user form -->
+                <div class="flex gap-2 mb-4 p-3 bg-purple-50 rounded-2xl border border-purple-100">
+                    <input id="new-user-code" type="text" inputmode="numeric" maxlength="10"
+                        placeholder="รหัสพนักงาน (ตัวเลข)"
+                        class="flex-none w-36 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-purple-400 bg-white">
+                    <input id="new-user-name" type="text"
+                        placeholder="ชื่อ-สกุล (เช่น นายสมชาย ใจดี)"
+                        onkeydown="if(event.key==='Enter') addUserEntry()"
+                        class="flex-1 min-w-0 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-purple-400 bg-white">
+                    <button onclick="addUserEntry()" class="flex-none px-4 py-2 brand-primary text-white rounded-xl text-sm font-black hover:scale-105 transition-all">+ เพิ่ม</button>
+                </div>
+                <!-- User list -->
+                <div id="admin-user-list" class="max-h-[46vh] overflow-y-auto space-y-1.5"></div>
+                <div class="flex gap-3 mt-4 pt-3 border-t border-slate-100">
+                    <button onclick="resetUsersToDefault()" class="flex-1 py-2.5 border border-slate-200 text-slate-500 rounded-xl text-sm font-bold hover:bg-slate-50">↺ ค่าเริ่มต้น</button>
+                    <button onclick="saveUsersToFirestore()" class="flex-2 px-6 py-2.5 brand-primary text-white rounded-xl text-sm font-black shadow-lg shadow-purple-200">💾 บันทึก — sync ทุกเครื่อง</button>
+                </div>
             </div>
             <div id="apanel-stats" class="p-4 hidden">
                 <div id="admin-stats-content" class="grid grid-cols-2 gap-3"></div>
@@ -930,7 +963,8 @@
         };
 
         // ── ผู้ใช้งานระบบ (รหัสพนักงาน → ชื่อ) ─────────────────────
-        const USERS = {
+        // ── USERS: โหลดจาก Firestore (Admin เพิ่ม/ลบได้ — sync ทุกเครื่อง) ──
+        const DEFAULT_USERS = {
             "898":     "นายจิระพันธ์ สวนานนท์",
             "449717":  "นายนิมิตร ทองชิต",
             "502544":  "นายเฉลิมพล แซ่ลิ้ม",
@@ -964,6 +998,7 @@
             "9009346": "นายวัชฤทธิ์ คงเติม",
             "9010782": "นายชัชวิน ทองจิตร",
         };
+        let USERS = { ...DEFAULT_USERS };
         let currentUser = null; // { code, name }
 
         // ── ทีม (โหลดจาก localStorage หรือค่าเริ่มต้น) ──────────────
@@ -1153,7 +1188,7 @@
                 await Promise.race([authPromise, timeoutPromise]);
 
                 onAuthStateChanged(auth, user => {
-                    if (user) { document.getElementById('loading').style.display = 'none'; startSync(); startHolidaySync(); }
+                    if (user) { document.getElementById('loading').style.display = 'none'; startSync(); startHolidaySync(); startUsersSync(); }
                 });
                 document.getElementById('field-team').innerHTML = `<option value="">เลือกสายงาน...</option>` + TEAMS.map(t => `<option value="${t.id}">${t.id}: ${t.name}</option>`).join('');
                 lucide.createIcons();
@@ -3020,7 +3055,7 @@
         };
 
         window.adminTab = (tab) => {
-            ['log','quota','stats'].forEach(t => {
+            ['log','quota','users','stats'].forEach(t => {
                 document.getElementById(`apanel-${t}`).classList.toggle('hidden', t !== tab);
                 const btn = document.getElementById(`atab-${t}`);
                 if (!btn) return;
@@ -3034,6 +3069,7 @@
             });
             if (tab === 'log')   loadAdminLogs();
             if (tab === 'quota') loadAdminQuota();
+            if (tab === 'users') loadUsersPanel();
             if (tab === 'stats') loadAdminStats();
         };
 
@@ -3129,6 +3165,114 @@
                     <div class="text-xs font-black text-slate-400 mb-2 uppercase">ทีมที่มีงานมากสุด</div>
                     ${topTeam.map(([tid,cnt])=>`<div class="flex justify-between items-center py-1 border-b border-slate-50 last:border-0"><span class="text-xs font-bold text-slate-700">${TEAMS.find(t=>t.id===tid)?.name||tid}</span><span class="text-xs font-black text-purple-700">${cnt} งาน</span></div>`).join('')}
                 </div>`;
+        };
+
+        // ══════════════════════════════════════════════════════════
+        // USERS SYNC (Firestore → ทุกเครื่อง realtime)
+        // ══════════════════════════════════════════════════════════
+        const startUsersSync = () => {
+            const { doc: fsDoc, onSnapshot: fsOnSnapshot } = window._fsRefs;
+            const usersRef = fsDoc(db, 'config', 'users');
+            fsOnSnapshot(usersRef, snap => {
+                if (snap.exists()) {
+                    const data = snap.data();
+                    if (data && data.map && typeof data.map === 'object') {
+                        // Overwrite USERS in-place, keep ADMIN_CODE always
+                        Object.keys(USERS).forEach(k => delete USERS[k]);
+                        Object.assign(USERS, data.map);
+                        // Guarantee admin never gets removed
+                        if (!USERS[ADMIN_CODE]) USERS[ADMIN_CODE] = DEFAULT_USERS[ADMIN_CODE];
+                    }
+                } else {
+                    // First run: push defaults to Firestore
+                    _pushDefaultUsers();
+                }
+            });
+        };
+
+        const _pushDefaultUsers = async () => {
+            try {
+                const { doc: fsDoc, setDoc } = window._fsRefs;
+                await setDoc(fsDoc(db, 'config', 'users'), {
+                    map: DEFAULT_USERS,
+                    updatedBy: 'system',
+                    updatedAt: new Date().toISOString()
+                });
+            } catch(e) { console.warn('Could not push default users', e); }
+        };
+
+        // ── Admin tab: Users panel ──────────────────────────────
+        let _pendingUsers = {}; // local working copy while editing
+
+        const renderUserList = () => {
+            const container = document.getElementById('admin-user-list');
+            const badge = document.getElementById('user-count-badge');
+            const entries = Object.entries(_pendingUsers).sort((a,b) => a[0].localeCompare(b[0], undefined, {numeric:true}));
+            badge.textContent = `${entries.length} คน`;
+            container.innerHTML = entries.map(([code, name]) => {
+                const isAdminUser = code === ADMIN_CODE;
+                return `<div class="user-row">
+                    <span class="user-code-badge">${code}</span>
+                    <input class="user-name-inp" value="${name}" data-code="${code}"
+                        onchange="_pendingUsers['${code}']=this.value.trim()||_pendingUsers['${code}']"
+                        placeholder="ชื่อ-สกุล">
+                    ${isAdminUser ? '<span class="admin-star" title="Admin">👑</span>' : ''}
+                    <button class="del-user" onclick="deleteUserEntry('${code}')"
+                        ${isAdminUser ? 'disabled title="ไม่สามารถลบ Admin"' : ''}>✕</button>
+                </div>`;
+            }).join('');
+        };
+
+        const loadUsersPanel = () => {
+            _pendingUsers = { ...USERS };
+            renderUserList();
+        };
+
+        window.addUserEntry = () => {
+            const codeEl = document.getElementById('new-user-code');
+            const nameEl = document.getElementById('new-user-name');
+            const code = codeEl.value.trim().replace(/\D/g,'');
+            const name = nameEl.value.trim();
+            if (!code) { codeEl.focus(); codeEl.style.borderColor='#dc2626'; setTimeout(()=>codeEl.style.borderColor='',1500); return; }
+            if (!name) { nameEl.focus(); nameEl.style.borderColor='#dc2626'; setTimeout(()=>nameEl.style.borderColor='',1500); return; }
+            if (_pendingUsers[code]) {
+                if (!confirm(`รหัส ${code} มีอยู่แล้ว (${_pendingUsers[code]})\nต้องการแทนที่ด้วยชื่อใหม่?`)) return;
+            }
+            _pendingUsers[code] = name;
+            codeEl.value = ''; nameEl.value = '';
+            codeEl.focus();
+            renderUserList();
+            showRealtimeToast(`เพิ่ม ${name} แล้ว (กด "บันทึก" เพื่อ sync)`, '👤');
+        };
+
+        window.deleteUserEntry = (code) => {
+            if (code === ADMIN_CODE) { alert('⛔ ไม่สามารถลบ Admin'); return; }
+            const name = _pendingUsers[code] || code;
+            if (!confirm(`ลบ "${name}" (${code})?`)) return;
+            delete _pendingUsers[code];
+            renderUserList();
+        };
+
+        window.saveUsersToFirestore = async () => {
+            if (!isAdmin()) return;
+            if (!_pendingUsers[ADMIN_CODE]) _pendingUsers[ADMIN_CODE] = DEFAULT_USERS[ADMIN_CODE];
+            try {
+                const { doc: fsDoc, setDoc } = window._fsRefs;
+                await setDoc(fsDoc(db, 'config', 'users'), {
+                    map: _pendingUsers,
+                    updatedBy: currentUser.code,
+                    updatedAt: new Date().toISOString()
+                });
+                showRealtimeToast(`บันทึก ${Object.keys(_pendingUsers).length} Users แล้ว — ทุกเครื่องอัปเดต 👤`, '✅');
+                // Reload panel to show synced data
+                setTimeout(renderUserList, 600);
+            } catch(e) { alert('บันทึกไม่สำเร็จ: ' + e.message); }
+        };
+
+        window.resetUsersToDefault = () => {
+            if (!confirm('รีเซ็ต User list กลับค่าเริ่มต้น?')) return;
+            _pendingUsers = { ...DEFAULT_USERS };
+            renderUserList();
         };
 
         init();
