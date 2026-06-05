@@ -120,6 +120,16 @@
         .task-chip-done { background: #f0fdf4; color: #166534; border-left-color: #10b981; }
         .more-tasks { font-size: 8px; color: #7c3aed; font-weight: 800; text-align: center; cursor: pointer; padding: 1px; background: #f5f3ff; border-radius: 4px; }
 
+        /* ── Admin Panel ─────────────────────────────────────── */
+        .log-row { display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:start; padding:10px 0; border-bottom:1px solid #f1f5f9; font-size:12px; }
+        .log-action-badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:8px; font-weight:900; font-size:10px; white-space:nowrap; }
+        .log-action-badge.add_task     { background:#dcfce7; color:#16a34a; }
+        .log-action-badge.edit_task    { background:#dbeafe; color:#2563eb; }
+        .log-action-badge.delete_task  { background:#fee2e2; color:#dc2626; }
+        .log-action-badge.update_status{ background:#fef9c3; color:#ca8a04; }
+        .log-action-badge.login        { background:#f3e8ff; color:#9333ea; }
+        .quota-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:12px 14px; margin-bottom:8px; }
+
         /* ── Login Screen ───────────────────────────────────── */
         #login-screen { position:fixed; inset:0; background:linear-gradient(135deg,#4c1d95 0%,#7c3aed 50%,#a855f7 100%); z-index:200; display:flex; align-items:center; justify-content:center; padding:20px; }
         #login-screen.hidden { display:none; }
@@ -234,15 +244,50 @@
         .pres-icon-btn:hover { background:#6d28d9; transform:scale(1.1); }
 
         @media (max-width: 640px) {
-            .calendar-day-label { font-size: 9px; padding: 6px 2px; }
-            .calendar-cell { min-height: 56px; padding: 3px 2px; }
-            .date-num { font-size: 10px; }
-            .task-chip { padding: 2px 3px; border-left-width: 2px; }
-            .task-chip .chip-leader { font-size: 7px; }
+            /* Nav compact */
+            nav { padding-left: 12px !important; padding-right: 12px !important; }
+            #nav-user { max-width: 130px; }
+            #nav-user-name { max-width: 80px; font-size: 10px; }
+
+            /* Calendar day labels */
+            .calendar-day-label { font-size: 9px; padding: 6px 1px; }
+
+            /* Calendar cells — tighter for 7-col grid */
+            .calendar-cell { min-height: 60px; padding: 3px 2px; gap: 1px; }
+            .calendar-cell:not(.empty):hover::after { display: none; } /* hide + hint on mobile */
+
+            /* Date number */
+            .date-num { font-size: 10px; min-width: 18px; height: 18px; }
+            .today .date-num { width: 18px !important; height: 18px !important; font-size: 10px !important; }
+
+            /* Holiday chip — compact single line */
+            .holiday-chip { font-size: 7px; padding: 1px 3px; border-left-width: 2px; letter-spacing: -0.2px; }
+
+            /* Task chips */
+            .task-chip { padding: 2px 3px; border-left-width: 2px; border-radius: 3px; }
+            .task-chip .chip-leader { font-size: 7px; line-height: 1.2; }
             .task-chip .chip-title { display: none; }
+
+            /* Pres button always show on mobile */
+            .pres-icon-btn { display: flex !important; width: 14px; height: 14px; top: 1px; right: 1px; }
+            .pres-icon-btn svg { width: 7px; height: 7px; }
+
             .lb-btn { width: 40px; height: 40px; font-size: 18px; }
-            .pres-icon-btn { display: flex !important; width: 15px; height: 15px; }
-            .pres-icon-btn svg { width: 8px; height: 8px; }
+
+            /* Stats row — 2x2 grid on narrow */
+            .stat-cards-row { grid-template-columns: repeat(2, 1fr) !important; }
+
+            /* Modal full-width on mobile */
+            .modal-content { border-radius: 20px 20px 0 0 !important; margin-top: auto !important; max-height: 92vh; }
+            .modal-overlay { align-items: flex-end !important; }
+
+            /* Form fields stack properly */
+            .grid.grid-cols-1.md\\:grid-cols-2 { grid-template-columns: 1fr !important; }
+            .grid.grid-cols-2 { grid-template-columns: 1fr 1fr; }
+
+            /* Holiday editor */
+            .holiday-row input[type="date"] { width: 115px; font-size: 11px; }
+            .holiday-row input[type="text"] { font-size: 11px; }
         }
 
         /* File Viewer Modal */
@@ -377,6 +422,51 @@
         </div>
     </div>
 
+    <!-- ═══ ADMIN PANEL MODAL ════════════════════════════════════ -->
+    <div id="adminModal" class="modal-overlay">
+        <div class="modal-content" style="max-width:680px;">
+            <div class="p-5 border-b flex justify-between items-center" style="background:linear-gradient(135deg,#1e1b4b,#4c1d95);">
+                <div class="flex items-center gap-3">
+                    <span style="font-size:22px;">👑</span>
+                    <div>
+                        <h3 class="text-lg font-black text-white">Admin Panel</h3>
+                        <p class="text-[11px] text-purple-200 font-bold">นายศุภชัย จันทร์ครุฑ · รหัส 489961</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('adminModal')" class="p-2 hover:bg-white/10 rounded-full text-white"><i data-lucide="x"></i></button>
+            </div>
+            <div class="flex border-b bg-slate-50 text-sm font-black overflow-x-auto">
+                <button onclick="adminTab('log')" id="atab-log" class="px-5 py-3 whitespace-nowrap border-b-2 border-purple-600 text-purple-700">📋 Log</button>
+                <button onclick="adminTab('quota')" id="atab-quota" class="px-5 py-3 whitespace-nowrap border-b-2 border-transparent text-slate-400">📊 Quota</button>
+                <button onclick="adminTab('stats')" id="atab-stats" class="px-5 py-3 whitespace-nowrap border-b-2 border-transparent text-slate-400">📈 สถิติ</button>
+            </div>
+            <div id="apanel-log" class="p-4">
+                <div class="flex gap-2 mb-3 flex-wrap">
+                    <select id="log-filter-action" onchange="loadAdminLogs()" class="text-xs border border-slate-200 rounded-xl px-3 py-2 outline-none font-bold">
+                        <option value="">ทุกประเภท</option>
+                        <option value="add_task">เพิ่มงาน</option>
+                        <option value="edit_task">แก้ไขงาน</option>
+                        <option value="delete_task">ลบงาน</option>
+                        <option value="update_status">อัปเดตสถานะ</option>
+                        <option value="login">เข้าสู่ระบบ</option>
+                    </select>
+                    <button onclick="loadAdminLogs()" class="px-4 py-2 brand-primary text-white rounded-xl text-xs font-black">🔄 โหลด</button>
+                </div>
+                <div id="admin-log-list" class="max-h-[52vh] overflow-y-auto space-y-0">
+                    <p class="text-slate-400 text-sm text-center py-8 font-bold">กดโหลดเพื่อดู log</p>
+                </div>
+            </div>
+            <div id="apanel-quota" class="p-4 hidden">
+                <p class="text-xs text-slate-400 font-bold mb-3">โควต้าลบงานรายวันของแต่ละคน (เก็บในอุปกรณ์นี้)</p>
+                <div id="admin-quota-list" class="max-h-[52vh] overflow-y-auto"></div>
+                <button onclick="adminResetAllQuota()" class="mt-4 w-full py-2.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-sm font-black hover:bg-rose-100">🔓 รีเซ็ต Quota ทุกคน</button>
+            </div>
+            <div id="apanel-stats" class="p-4 hidden">
+                <div id="admin-stats-content" class="grid grid-cols-2 gap-3"></div>
+            </div>
+        </div>
+    </div>
+
     <div id="loading" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center">
         <div class="w-14 h-14 border-4 border-purple-100 border-t-purple-600 rounded-full animate-spin mb-4"></div>
         <p class="text-purple-700 font-bold">กำลังตรวจสอบข้อมูล...</p>
@@ -414,6 +504,7 @@
                 <!-- Team & Holiday quick buttons (Admin only) -->
                 <button onclick="adminGate(openTeamModal)" title="จัดการทีม (Admin)" class="p-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm hover:bg-slate-200 transition-all" style="font-size:16px;">👥</button>
                 <button onclick="adminGate(openHolidayModal)" title="แก้ไขวันหยุด (Admin)" class="p-2.5 bg-amber-50 text-amber-600 rounded-xl text-sm hover:bg-amber-100 transition-all" style="font-size:16px;">📅</button>
+                <button id="admin-panel-btn" onclick="openAdminPanel()" title="Admin Panel" class="hidden p-2.5 rounded-xl text-sm transition-all" style="font-size:16px;background:linear-gradient(135deg,#4c1d95,#7c3aed);color:white;">👑</button>
                 <button id="install-btn" onclick="installApp()" class="hidden items-center gap-1.5 px-3 py-2 bg-purple-100 text-purple-700 rounded-xl text-xs font-bold hover:bg-purple-200 transition-all border border-purple-200">
                     <i data-lucide="download" class="w-3.5 h-3.5"></i>
                     <span class="hidden sm:inline">ติดตั้งแอป</span>
@@ -1306,8 +1397,8 @@
                 if (holiday) {
                     const hc = document.createElement('div');
                     hc.className = 'holiday-chip';
-                    hc.title = holiday;
-                    hc.textContent = '🎌 ' + holiday;
+                    hc.title = holiday; // full name as tooltip
+                    hc.textContent = '🎌 วันหยุด';
                     inner.appendChild(hc);
                 }
                 for (const t of dayTasks) {
@@ -2743,11 +2834,17 @@
                 const shortName = name.replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'');
                 const isAdminUser = _loginBuffer === ADMIN_CODE;
                 document.getElementById('nav-user-name').innerHTML =
-                    shortName + (isAdminUser ? ' <span style="background:#7c3aed;color:white;font-size:9px;padding:1px 5px;border-radius:6px;font-weight:900;vertical-align:middle;">ADMIN</span>' : '');
+                    shortName + (isAdminUser
+                        ? ' <span style="background:#7c3aed;color:white;font-size:9px;padding:1px 5px;border-radius:6px;font-weight:900;vertical-align:middle;">ADMIN</span>'
+                        : '');
                 document.getElementById('nav-user').classList.remove('hidden');
+                // Show/hide Admin panel button
+                const adminBtn = document.getElementById('admin-panel-btn');
+                if (adminBtn) adminBtn.classList.toggle('hidden', !isAdminUser);
                 document.getElementById('login-screen').classList.add('hidden');
                 localStorage.setItem('pea_session', JSON.stringify(currentUser));
                 _loginBuffer = '';
+                renderLoginDots();
             } else {
                 document.getElementById('login-error').textContent = '❌ ไม่พบรหัสพนักงาน กรุณาตรวจสอบอีกครั้ง';
                 _loginBuffer = '';
@@ -2763,7 +2860,6 @@
             document.getElementById('nav-user').classList.add('hidden');
             document.getElementById('login-screen').classList.remove('hidden');
         };
-        // Auto-restore session
         const restoreSession = () => {
             try {
                 const s = localStorage.getItem('pea_session');
@@ -2772,9 +2868,14 @@
                     if (u && USERS[u.code]) {
                         currentUser = u;
                         const sn = u.name.replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'');
+                        const isAdminUser = u.code === ADMIN_CODE;
                         document.getElementById('nav-user-name').innerHTML =
-                            sn + (u.code === ADMIN_CODE ? ' <span style="background:#7c3aed;color:white;font-size:9px;padding:1px 5px;border-radius:6px;font-weight:900;vertical-align:middle;">ADMIN</span>' : '');
+                            sn + (isAdminUser
+                                ? ' <span style="background:#7c3aed;color:white;font-size:9px;padding:1px 5px;border-radius:6px;font-weight:900;vertical-align:middle;">ADMIN</span>'
+                                : '');
                         document.getElementById('nav-user').classList.remove('hidden');
+                        const adminBtn = document.getElementById('admin-panel-btn');
+                        if (adminBtn) adminBtn.classList.toggle('hidden', !isAdminUser);
                         document.getElementById('login-screen').classList.add('hidden');
                         return true;
                     }
@@ -2899,6 +3000,135 @@
             const { doc: fsDoc, setDoc } = window._fsRefs;
             await setDoc(fsDoc(db, 'config', 'holidays'), { map: defaultH, updatedBy: currentUser.code, updatedAt: new Date().toISOString() });
             openHolidayModal();
+        };
+
+        // ══════════════════════════════════════════════════════════
+        // ADMIN PANEL JS
+        // ══════════════════════════════════════════════════════════
+        const LOG_ACTION_LABEL = {
+            add_task:     { th: '➕ เพิ่มงาน',        cls: 'add_task' },
+            edit_task:    { th: '✏️ แก้ไขงาน',       cls: 'edit_task' },
+            delete_task:  { th: '🗑️ ลบงาน',          cls: 'delete_task' },
+            update_status:{ th: '🔄 อัปเดตสถานะ',    cls: 'update_status' },
+            login:        { th: '🔑 เข้าสู่ระบบ',    cls: 'login' },
+        };
+
+        window.openAdminPanel = () => {
+            if (!isAdmin()) { alert('⛔ Admin เท่านั้น'); return; }
+            openModal('adminModal');
+            adminTab('log');
+        };
+
+        window.adminTab = (tab) => {
+            ['log','quota','stats'].forEach(t => {
+                document.getElementById(`apanel-${t}`).classList.toggle('hidden', t !== tab);
+                const btn = document.getElementById(`atab-${t}`);
+                if (!btn) return;
+                if (t === tab) {
+                    btn.style.borderBottomColor = '#7c3aed';
+                    btn.style.color = '#7c3aed';
+                } else {
+                    btn.style.borderBottomColor = 'transparent';
+                    btn.style.color = '#94a3b8';
+                }
+            });
+            if (tab === 'log')   loadAdminLogs();
+            if (tab === 'quota') loadAdminQuota();
+            if (tab === 'stats') loadAdminStats();
+        };
+
+        window.loadAdminLogs = async () => {
+            const list = document.getElementById('admin-log-list');
+            list.innerHTML = '<p class="text-slate-400 text-sm text-center py-8">กำลังโหลด…</p>';
+            try {
+                const { query, orderBy, limit: fsLimit, where, getDocs } =
+                    await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+                const filterAction = document.getElementById('log-filter-action')?.value || '';
+                let q = filterAction
+                    ? query(collection(db,'audit_logs'), where('action','==',filterAction), orderBy('ts','desc'), fsLimit(100))
+                    : query(collection(db,'audit_logs'), orderBy('ts','desc'), fsLimit(150));
+                const snap = await getDocs(q);
+                if (snap.empty) { list.innerHTML = '<p class="text-slate-400 text-sm text-center py-8 font-bold">ไม่มีข้อมูล</p>'; return; }
+                list.innerHTML = snap.docs.map(d => {
+                    const log = d.data();
+                    const ts  = log.ts?.toDate ? log.ts.toDate() : new Date();
+                    const timeStr = ts.toLocaleString('th-TH', { day:'2-digit', month:'short', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+                    const ab = LOG_ACTION_LABEL[log.action] || { th: log.action, cls: 'login' };
+                    const detail = log.taskTitle ? `<span class="text-slate-400 block leading-tight">${log.taskTitle}</span>` : '';
+                    const uname = (USERS[log.userCode] || log.userCode || '').replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'');
+                    return `<div class="log-row">
+                        <span class="log-action-badge ${ab.cls}">${ab.th}</span>
+                        <div class="font-bold text-slate-700 text-xs leading-tight">${uname}${detail}</div>
+                        <span class="text-[10px] text-slate-300 font-bold whitespace-nowrap">${timeStr}</span>
+                    </div>`;
+                }).join('');
+            } catch(e) {
+                list.innerHTML = `<p class="text-rose-500 text-sm text-center py-8 font-bold">โหลดไม่สำเร็จ: ${e.message}</p>`;
+            }
+        };
+
+        const loadAdminQuota = () => {
+            const container = document.getElementById('admin-quota-list');
+            const today = new Date().toISOString().slice(0,10);
+            container.innerHTML = Object.entries(USERS).map(([code, name]) => {
+                let count = 0;
+                try {
+                    const raw = localStorage.getItem(`pea_del_quota_${code}`);
+                    if (raw) { const q = JSON.parse(raw); if (q.date === today) count = q.count; }
+                } catch {}
+                // Fallback to shared key for backward-compat
+                if (!count) try {
+                    const raw = localStorage.getItem('pea_del_quota');
+                    if (raw) { const q = JSON.parse(raw); if (q.date === today) count = q.count; }
+                } catch {}
+                const pct = Math.round(count / DELETE_QUOTA_MAX * 100);
+                const color = count >= DELETE_QUOTA_MAX ? '#dc2626' : count > 0 ? '#f59e0b' : '#16a34a';
+                const shortName = name.replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'');
+                return `<div class="quota-card">
+                    <div class="flex justify-between items-center mb-1.5">
+                        <span class="text-xs font-black text-slate-700">${shortName}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-black" style="color:${color}">${count}/${DELETE_QUOTA_MAX}</span>
+                            <button onclick="adminResetQuota('${code}')" class="text-[10px] px-2 py-0.5 bg-slate-100 rounded-lg font-bold hover:bg-rose-100 hover:text-rose-600">รีเซ็ต</button>
+                        </div>
+                    </div>
+                    <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div style="width:${pct}%;background:${color};height:100%;border-radius:999px;transition:width 0.3s"></div>
+                    </div>
+                </div>`;
+            }).join('');
+        };
+
+        window.adminResetQuota = (code) => {
+            localStorage.removeItem(`pea_del_quota_${code}`);
+            if (code === currentUser?.code) localStorage.removeItem('pea_del_quota');
+            loadAdminQuota();
+            showRealtimeToast(`รีเซ็ต quota ${(USERS[code]||code).replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'')} แล้ว`, '🔓');
+        };
+        window.adminResetAllQuota = () => {
+            Object.keys(USERS).forEach(c => localStorage.removeItem(`pea_del_quota_${c}`));
+            localStorage.removeItem('pea_del_quota');
+            loadAdminQuota();
+            showRealtimeToast('รีเซ็ต quota ทุกคนแล้ว 🔓', '✅');
+        };
+
+        const loadAdminStats = () => {
+            const total = tasks.length;
+            const done  = tasks.filter(t => t.status==='done').length;
+            const prog  = tasks.filter(t => t.status==='progress').length;
+            const pend  = tasks.filter(t => t.status==='pending').length;
+            const byTeam = {};
+            tasks.forEach(t => { byTeam[t.teamId] = (byTeam[t.teamId]||0)+1; });
+            const topTeam = Object.entries(byTeam).sort((a,b)=>b[1]-a[1]).slice(0,3);
+            document.getElementById('admin-stats-content').innerHTML = `
+                <div class="quota-card text-center"><div class="text-3xl font-black text-purple-700">${total}</div><div class="text-xs text-slate-400 font-bold mt-1">งานทั้งหมด</div></div>
+                <div class="quota-card text-center"><div class="text-3xl font-black text-emerald-600">${done}</div><div class="text-xs text-slate-400 font-bold mt-1">เสร็จแล้ว ✅</div></div>
+                <div class="quota-card text-center"><div class="text-3xl font-black text-blue-500">${prog}</div><div class="text-xs text-slate-400 font-bold mt-1">กำลังทำ 🔄</div></div>
+                <div class="quota-card text-center"><div class="text-3xl font-black text-amber-500">${pend}</div><div class="text-xs text-slate-400 font-bold mt-1">รอดำเนินการ ⏳</div></div>
+                <div class="quota-card col-span-2">
+                    <div class="text-xs font-black text-slate-400 mb-2 uppercase">ทีมที่มีงานมากสุด</div>
+                    ${topTeam.map(([tid,cnt])=>`<div class="flex justify-between items-center py-1 border-b border-slate-50 last:border-0"><span class="text-xs font-bold text-slate-700">${TEAMS.find(t=>t.id===tid)?.name||tid}</span><span class="text-xs font-black text-purple-700">${cnt} งาน</span></div>`).join('')}
+                </div>`;
         };
 
         init();
