@@ -120,6 +120,22 @@
         .task-chip-done { background: #f0fdf4; color: #166534; border-left-color: #10b981; }
         .more-tasks { font-size: 8px; color: #7c3aed; font-weight: 800; text-align: center; cursor: pointer; padding: 1px; background: #f5f3ff; border-radius: 4px; }
 
+        /* ── Offline Banner ──────────────────────────────────── */
+        #offline-banner { position:fixed; bottom:0; left:0; right:0; z-index:9990; transform:translateY(100%); transition:transform 0.35s cubic-bezier(.34,1.56,.64,1); }
+        #offline-banner.show { transform:translateY(0); }
+        #offline-banner-inner { margin:8px; border-radius:16px; padding:12px 16px; display:flex; align-items:center; gap:10px; font-size:13px; font-weight:900; box-shadow:0 8px 32px rgba(0,0,0,0.2); }
+        #offline-banner-inner.offline { background:#1e293b; color:white; }
+        #offline-banner-inner.online  { background:#f0fdf4; color:#166534; border:1.5px solid #bbf7d0; }
+        #offline-queue-badge { display:inline-flex; align-items:center; justify-content:center; background:#ef4444; color:white; border-radius:999px; font-size:10px; padding:1px 6px; margin-left:4px; min-width:18px; }
+
+        /* ── Advanced Search Panel ───────────────────────────── */
+        #adv-search-panel { overflow:hidden; max-height:0; transition:max-height 0.3s ease, opacity 0.2s; opacity:0; }
+        #adv-search-panel.open { max-height:200px; opacity:1; }
+        .adv-filter-label { font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block; }
+        .adv-filter-input { width:100%; border:1px solid #e2e8f0; border-radius:10px; padding:7px 10px; font-size:13px; font-family:'Sarabun',sans-serif; outline:none; background:white; }
+        .adv-filter-input:focus { border-color:#7c3aed; box-shadow:0 0 0 3px rgba(124,58,237,0.08); }
+        .adv-active-badge { display:inline-flex; align-items:center; gap:4px; background:#ede9fe; color:#6d28d9; border-radius:8px; padding:2px 8px; font-size:11px; font-weight:900; }
+
         /* ── Admin Panel ─────────────────────────────────────── */
         .user-row { display:flex; align-items:center; gap:8px; padding:8px 10px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0; }
         .user-row .user-code-badge { flex-shrink:0; font-size:10px; font-weight:900; background:#ede9fe; color:#6d28d9; padding:3px 8px; border-radius:8px; font-family:monospace; }
@@ -645,6 +661,14 @@ service cloud.firestore {
                     <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-3 text-slate-400"></i>
                     <input type="text" id="search" oninput="debouncedSearch()" placeholder="ค้นหาภารกิจ..." class="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm w-full outline-none focus:ring-2 focus:ring-purple-100">
                 </div>
+                <!-- Advanced Search Toggle -->
+                <button onclick="toggleAdvSearch()" id="adv-search-btn"
+                    title="ค้นหาขั้นสูง"
+                    class="flex-shrink-0 flex items-center gap-1.5 px-3 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-700 transition-all shadow-sm">
+                    <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">กรอง</span>
+                    <span id="adv-active-count" class="hidden adv-active-badge">0</span>
+                </button>
                 <div class="relative flex-shrink-0">
                     <button onclick="toggleExportMenu()" class="flex items-center gap-1.5 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm whitespace-nowrap">
                         <i data-lucide="download" class="w-4 h-4"></i> Export
@@ -660,6 +684,54 @@ service cloud.firestore {
                 </div>
             </div>
 
+            </div>
+        </div>
+
+        <!-- Advanced Search Panel (collapsed by default) -->
+        <div id="adv-search-panel" class="bg-white border border-slate-200 rounded-2xl shadow-sm px-4 pt-3 pb-4 mb-3 mx-0">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                    <label class="adv-filter-label">ทีมงาน</label>
+                    <select id="adv-team" onchange="applyAdvSearch()" class="adv-filter-input">
+                        <option value="">ทั้งหมด</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="adv-filter-label">สถานะ</label>
+                    <select id="adv-status" onchange="applyAdvSearch()" class="adv-filter-input">
+                        <option value="">ทั้งหมด</option>
+                        <option value="pending">⏳ รอดำเนินการ</option>
+                        <option value="progress">🔄 กำลังทำ</option>
+                        <option value="done">✅ สำเร็จ</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="adv-filter-label">วันเริ่มต้น</label>
+                    <input type="date" id="adv-date-from" onchange="applyAdvSearch()" class="adv-filter-input">
+                </div>
+                <div>
+                    <label class="adv-filter-label">วันสิ้นสุด</label>
+                    <input type="date" id="adv-date-to" onchange="applyAdvSearch()" class="adv-filter-input">
+                </div>
+            </div>
+            <div class="flex justify-between items-center mt-3 pt-2 border-t border-slate-100">
+                <span id="adv-result-label" class="text-xs text-slate-400 font-bold"></span>
+                <button onclick="clearAdvSearch()" class="text-xs font-black text-rose-500 hover:text-rose-700 flex items-center gap-1 transition-all">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+                    ล้างตัวกรองทั้งหมด
+                </button>
+            </div>
+        </div>
+
+        <!-- Offline Banner -->
+        <div id="offline-banner">
+            <div id="offline-banner-inner" class="offline">
+                <span id="offline-icon" style="font-size:18px">📡</span>
+                <div class="flex-1 min-w-0">
+                    <span id="offline-msg">ไม่มีสัญญาณอินเทอร์เน็ต</span>
+                    <span id="offline-queue-badge" class="hidden"></span>
+                </div>
+                <span id="offline-retry-btn" onclick="retryOfflineQueue()" class="hidden text-xs bg-white/20 rounded-lg px-3 py-1.5 cursor-pointer hover:bg-white/30 font-bold transition-all whitespace-nowrap">🔄 sync ตอนนี้</span>
             </div>
         </div>
 
@@ -1325,7 +1397,7 @@ service cloud.firestore {
                         const t = { id: change.doc.id, ...change.doc.data() };
                         const statusTh = { pending:'รอดำเนินการ', progress:'กำลังทำ', done:'สำเร็จ ✅' };
                         if (change.type === 'added') {
-                            showRealtimeToast(`เพิ่มงานใหม่: <b>${t.title}</b>`, '📋');
+                            showRealtimeToast(`เพิ่มงานใหม่: <b>${escapeHTML(t.title)}</b>`, '📋');
                             flashCalendarCell(t.date);
                             // Browser notification
                             if (Notification.permission === 'granted') {
@@ -1337,7 +1409,7 @@ service cloud.firestore {
                         } else if (change.type === 'modified') {
                             const prev = _prevTaskMap[t.id];
                             if (prev && prev.status !== t.status) {
-                                showRealtimeToast(`อัปเดตสถานะ: <b>${t.title}</b> → ${statusTh[t.status] || t.status}`, '🔄');
+                                showRealtimeToast(`อัปเดตสถานะ: <b>${escapeHTML(t.title)}</b> → ${statusTh[t.status] || t.status}`, '🔄');
                                 flashCalendarCell(t.date);
                                 if (Notification.permission === 'granted') {
                                     new Notification('⚡ PEA — อัปเดตงาน', {
@@ -1346,7 +1418,7 @@ service cloud.firestore {
                                     });
                                 }
                             } else if (prev) {
-                                showRealtimeToast(`แก้ไขงาน: <b>${t.title}</b>`, '✏️');
+                                showRealtimeToast(`แก้ไขงาน: <b>${escapeHTML(t.title)}</b>`, '✏️');
                                 flashCalendarCell(t.date);
                             }
                         } else if (change.type === 'removed') {
@@ -1369,12 +1441,15 @@ service cloud.firestore {
         };
 
         window.renderContent = () => {
-            const s = document.getElementById('search').value.toLowerCase();
-            const filtered = s ? tasks.filter(t =>
+            const s = document.getElementById('search')?.value.toLowerCase() || '';
+            let filtered = s ? tasks.filter(t =>
                 t.title.toLowerCase().includes(s) ||
                 getLeaderCached(t.teamId).toLowerCase().includes(s) ||
+                (t.remark || '').toLowerCase().includes(s) ||
                 t.date.includes(s)
             ) : tasks;
+            // Apply advanced filters (team + status + date range)
+            filtered = applyFiltersToTasks(filtered);
             if (activeView === 'calendar') renderCalendar(filtered);
             else if (activeView === 'list') renderList(filtered);
             updateStats();
@@ -1499,7 +1574,14 @@ service cloud.firestore {
                     chip.className = `task-chip task-chip-${t.status}`;
                     chip.dataset.tid = t.id;
                     chip.addEventListener('click', e => showTaskPopup(e, t.id));
-                    chip.innerHTML = `<span class="chip-leader">${getLeaderCached(t.teamId)}</span><span class="chip-title">${t.title}</span>`;
+                    const leaderSpan = document.createElement('span');
+                    leaderSpan.className = 'chip-leader';
+                    leaderSpan.textContent = getLeaderCached(t.teamId);
+                    const titleSpan = document.createElement('span');
+                    titleSpan.className = 'chip-title';
+                    titleSpan.textContent = t.title;
+                    chip.appendChild(leaderSpan);
+                    chip.appendChild(titleSpan);
                     inner.appendChild(chip);
                 }
 
@@ -1557,8 +1639,8 @@ service cloud.firestore {
                         <div class="font-bold text-slate-800 text-sm">${getLeader(t.teamId)}</div>
                     </td>
                     <td class="px-6 py-4">
-                        <div class="font-bold text-slate-700 text-sm">${t.title}</div>
-                        ${t.remark ? `<div class="text-[11px] text-slate-400 mt-0.5 line-clamp-1">${t.remark.replace(URL_RE, u => `<a href="${u}" target="_blank" class="text-purple-500 underline">${(() => { try { return new URL(u).hostname; } catch { return u; } })()}</a>`)}</div>` : ''}
+                        <div class="font-bold text-slate-700 text-sm">${escapeHTML(t.title)}</div>
+                        ${t.remark ? `<div class="text-[11px] text-slate-400 mt-0.5 line-clamp-1">${escapeHTML(t.remark).replace(/https?:\/\/[^\s\u3000\u3001\u3002，。！？&<>"']+/g, u => { const safe = sanitizeURL(u); let lbl = u; try { lbl = new URL(u).hostname; } catch {} return safe !== '#' ? `<a href="${safe}" target="_blank" rel="noopener noreferrer" class="text-purple-500 underline">${escapeHTML(lbl)}</a>` : escapeHTML(u); })}</div>` : ''}
                     </td>
                     <td class="px-6 py-4">
                         <div class="text-[11px] text-slate-500 font-bold flex items-center gap-1">
@@ -1708,8 +1790,8 @@ service cloud.firestore {
                     teamId: document.getElementById('field-team').value,
                     date: document.getElementById('field-date').value,
                     dateEnd: document.getElementById('field-date-end').value || '',
-                    title: document.getElementById('field-title').value,
-                    remark: document.getElementById('field-remark').value.trim(),
+                    title:  sanitizeInput(document.getElementById('field-title').value, 200),
+                    remark: sanitizeInput(document.getElementById('field-remark').value, 1000),
                 };
                 if (files.length > 0) {
                     const processedNew = await Promise.all(files.map(f => processFile(f)));
@@ -1743,7 +1825,7 @@ service cloud.firestore {
             try {
                 const updateData = {
                     status: document.getElementById('report-status').value,
-                    reportNote: document.getElementById('report-note').value
+                    reportNote: sanitizeInput(document.getElementById('report-note').value, 500)
                 };
                 if (files.length > 0) {
                     const processedNew = await Promise.all(files.map(f => processFile(f)));
@@ -1796,15 +1878,15 @@ service cloud.firestore {
                 <div class="bg-slate-800 p-5 rounded-2xl mb-5 border border-slate-700">
                     <div class="flex justify-between items-start mb-3 gap-3">
                         <div>
-                            <h3 class="text-lg font-black leading-snug">${t.title}</h3>
-                            <p class="text-slate-400 text-xs mt-0.5">${getLeader(t.teamId)}</p>
+                            <h3 class="text-lg font-black leading-snug">${escapeHTML(t.title)}</h3>
+                            <p class="text-slate-400 text-xs mt-0.5">${escapeHTML(getLeader(t.teamId))}</p>
                         </div>
                         <span class="shrink-0 px-3 py-1 rounded-full text-[10px] font-black uppercase ${t.status==='done'?'bg-emerald-500 text-white':t.status==='progress'?'bg-blue-500 text-white':'bg-amber-500 text-white'}">
                             ${t.status==='done'?'สำเร็จ':t.status==='progress'?'กำลังทำ':'รอดำเนินการ'}
                         </span>
                     </div>
-                    ${t.remark ? `<div class="bg-purple-500/10 p-3 rounded-xl border-l-4 border-purple-500 mb-3 text-purple-300 text-xs">${t.remark.replace(URL_RE, u => `<a href="${u}" target="_blank" style="color:#a78bfa;text-decoration:underline;">${u}</a>`)}</div>` : ''}
-                    ${t.reportNote ? `<div class="bg-emerald-500/10 p-3 rounded-xl border-l-4 border-emerald-500 mb-3 text-emerald-400 text-sm italic">"${t.reportNote}"</div>` : ''}
+                    ${t.remark ? `<div class="bg-purple-500/10 p-3 rounded-xl border-l-4 border-purple-500 mb-3 text-purple-300 text-xs">${escapeHTML(t.remark).replace(/https?:\/\/[^\s\u3000\u3001\u3002，。！？&<>"']+/g, u => { const safe = sanitizeURL(u); return safe !== '#' ? `<a href="${safe}" target="_blank" rel="noopener noreferrer" style="color:#a78bfa;text-decoration:underline;">${escapeHTML(u)}</a>` : escapeHTML(u); })}</div>` : ''}
+                    ${t.reportNote ? `<div class="bg-emerald-500/10 p-3 rounded-xl border-l-4 border-emerald-500 mb-3 text-emerald-400 text-sm italic">"${escapeHTML(t.reportNote)}"</div>` : ''}
                     <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
                         ${taskF.map((f,fi) => f.t==='pdf'
                             ? `<a href="${f.url||f.d}" download="${f.n}" target="_blank" class="bg-slate-700 p-3 rounded-xl flex flex-col items-center justify-center gap-1 text-[10px] text-slate-300 hover:bg-slate-600 transition-all"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>ไฟล์สั่งงาน</a>`
@@ -1942,19 +2024,61 @@ service cloud.firestore {
         };
         // ── Remark field helpers ───────────────────────────────────
         const URL_RE = /https?:\/\/[^\s\u3000\u3001\u3002，。！？]+/g;
+
+        // ════════════════════════════════════════════════════════
+        // INPUT SANITIZATION — ป้องกัน XSS ทุกจุด
+        // ════════════════════════════════════════════════════════
+
+        // 1. stripHTML — ลบ HTML tags ทั้งหมดออก (ใช้ก่อน save ลง Firestore)
+        const stripHTML = (str) => {
+            if (!str) return '';
+            return String(str)
+                .replace(/<[^>]*>/g, '')           // ลบ tags
+                .replace(/&lt;/g, '<')              // decode เพื่อตรวจซ้ำ
+                .replace(/&gt;/g, '>')
+                .replace(/&amp;/g, '&')
+                .replace(/<[^>]*>/g, '')            // ลบ tags รอบ 2 หลัง decode
+                .trim();
+        };
+
+        // 2. escapeHTML — encode สำหรับใส่ใน innerHTML อย่างปลอดภัย
+        const escapeHTML = (str) => {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        };
+
+        // 3. sanitizeURL — ตรวจสอบ URL ให้เป็น http/https เท่านั้น ป้องกัน javascript:
+        const sanitizeURL = (url) => {
+            try {
+                const parsed = new URL(url);
+                return (parsed.protocol === 'http:' || parsed.protocol === 'https:') ? url : '#';
+            } catch { return '#'; }
+        };
+
+        // 4. sanitizeInput — สำหรับ title/remark ก่อน save: ลบ HTML + จำกัดความยาว
+        const sanitizeInput = (str, maxLen = 500) => {
+            return stripHTML(str).slice(0, maxLen);
+        };
         const renderRemarkLinks = (text) => {
             const container = document.getElementById('field-remark-links');
             if (!container) return;
             const urls = (text || '').match(URL_RE) || [];
             if (!urls.length) { container.innerHTML = ''; return; }
             container.innerHTML = urls.map(u => {
+                const safeHref = sanitizeURL(u);
+                if (safeHref === '#') return '';
                 let label = u;
                 try { label = new URL(u).hostname; } catch {}
-                return `<a href="${u}" target="_blank" rel="noopener"
+                return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer"
                     class="inline-flex items-center gap-1.5 text-[11px] font-bold text-purple-600 bg-purple-50 border border-purple-200 rounded-lg px-2.5 py-1 hover:bg-purple-100 transition-all truncate max-w-full"
                     style="text-decoration:none;">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-                    ${label}
+                    ${escapeHTML(label)}
                 </a>`;
             }).join('');
         };
@@ -2024,22 +2148,55 @@ service cloud.firestore {
             fn();
         };
 
-        // User quota: max 3 deletes per calendar day (stored in localStorage)
+        // ════════════════════════════════════════════════════════
+        // DELETE QUOTA — เก็บใน Firestore (sync ทุกเครื่อง)
+        // ════════════════════════════════════════════════════════
         const DELETE_QUOTA_MAX = 3;
-        const getDeleteQuota = () => {
-            try {
-                const today = new Date().toISOString().slice(0,10);
-                const raw = localStorage.getItem('pea_del_quota');
-                if (!raw) return { date: today, count: 0 };
-                const q = JSON.parse(raw);
-                if (q.date !== today) return { date: today, count: 0 }; // reset daily
-                return q;
-            } catch { return { date: new Date().toISOString().slice(0,10), count: 0 }; }
+        // cache ใน memory เพื่อไม่ต้อง async ทุกครั้งที่แสดง UI
+        let _quotaCache = {}; // { "userCode:date": count }
+
+        // key สำหรับ Firestore document
+        const _quotaDocId = (code) => {
+            const today = new Date().toISOString().slice(0,10);
+            return `${code}_${today}`;
         };
-        const incDeleteQuota = () => {
-            const q = getDeleteQuota();
-            q.count++;
-            localStorage.setItem('pea_del_quota', JSON.stringify(q));
+
+        // sync quota ของ user ปัจจุบันจาก Firestore → memory cache
+        const syncMyQuota = async () => {
+            if (!currentUser || isAdmin()) return;
+            try {
+                const docId = _quotaDocId(currentUser.code);
+                const snap = await getDoc(doc(db, 'delete_quotas', docId));
+                const today = new Date().toISOString().slice(0,10);
+                const cacheKey = `${currentUser.code}:${today}`;
+                _quotaCache[cacheKey] = snap.exists() ? (snap.data().count || 0) : 0;
+            } catch(e) { console.warn('syncMyQuota:', e.message); }
+        };
+
+        // อ่าน quota จาก memory cache (sync จาก Firestore แล้ว)
+        const getDeleteQuota = () => {
+            if (!currentUser) return { date: new Date().toISOString().slice(0,10), count: 0 };
+            const today = new Date().toISOString().slice(0,10);
+            const cacheKey = `${currentUser.code}:${today}`;
+            return { date: today, count: _quotaCache[cacheKey] || 0 };
+        };
+
+        // บันทึก quota ลง Firestore + อัปเดต cache
+        const incDeleteQuota = async () => {
+            if (!currentUser || isAdmin()) return;
+            const today = new Date().toISOString().slice(0,10);
+            const cacheKey = `${currentUser.code}:${today}`;
+            const newCount = (_quotaCache[cacheKey] || 0) + 1;
+            _quotaCache[cacheKey] = newCount;
+            // บันทึกลง Firestore (fire-and-forget)
+            const docId = _quotaDocId(currentUser.code);
+            setDoc(doc(db, 'delete_quotas', docId), {
+                userCode: currentUser.code,
+                userName: currentUser.name,
+                date: today,
+                count: newCount,
+                updatedAt: serverTimestamp()
+            }).catch(e => console.warn('incDeleteQuota Firestore:', e.message));
         };
 
         window.handleDeleteTask = async (id) => {
@@ -2085,7 +2242,7 @@ service cloud.firestore {
                 });
             }
             await deleteDoc(doc(db, 'tasks', id));
-            if (!isAdmin()) incDeleteQuota();
+            if (!isAdmin()) await incDeleteQuota();
         };
         window.closePresMode = () => document.getElementById('pres-mode').classList.remove('active');
 
@@ -2102,11 +2259,19 @@ service cloud.firestore {
             const remarkEl = document.getElementById('popup-remark');
             if (remarkEl) {
                 if (task.remark) {
-                    const html = task.remark.replace(URL_RE, u => {
-                        let label = u; try { label = new URL(u).hostname; } catch {}
-                        return `<a href="${u}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#7c3aed;text-decoration:underline;font-weight:700;">${label}</a>`;
-                    });
-                    remarkEl.innerHTML = html;
+                    // escape HTML ก่อน แล้วแทนที่ URL ด้วย safe anchor
+                    const safeRemark = escapeHTML(task.remark).replace(
+                        // match URL ใน escaped text (& → &amp; แล้ว แต่ URL ปกติไม่มี &)
+                        /https?:\/\/[^\s\u3000\u3001\u3002，。！？&<>"']+/g,
+                        raw => {
+                            const safeHref = sanitizeURL(raw);
+                            if (safeHref === '#') return escapeHTML(raw);
+                            let label = raw;
+                            try { label = new URL(raw).hostname; } catch {}
+                            return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="color:#7c3aed;text-decoration:underline;font-weight:700;">${escapeHTML(label)}</a>`;
+                        }
+                    );
+                    remarkEl.innerHTML = safeRemark;
                     remarkEl.parentElement.classList.remove('hidden');
                 } else {
                     remarkEl.parentElement.classList.add('hidden');
@@ -2114,22 +2279,29 @@ service cloud.firestore {
             }
             const allF = [...parseFiles(task.files_v2), ...parseFiles(task.reportFiles_v2)];
             document.getElementById('popup-btn-files').style.display = allF.length > 0 ? 'flex' : 'none';
-            // Update delete button label with quota info
+            // Update delete button — sync quota จาก Firestore ก่อน (async)
             const delLabel = document.getElementById('popup-del-label');
             const delBtn = document.getElementById('popup-del-btn');
             if (isAdmin()) {
                 delLabel.textContent = 'ลบงาน 👑';
                 delBtn.title = 'Admin: ลบได้ไม่จำกัด';
+                delBtn.style.opacity = '';
             } else {
-                const q = getDeleteQuota();
-                const rem = Math.max(0, DELETE_QUOTA_MAX - q.count);
-                if (rem === 0) {
-                    delLabel.textContent = 'ลบได้เต็มแล้ว ⛔';
-                    delBtn.style.opacity = '0.5';
-                } else {
-                    delLabel.textContent = `ลบงาน (เหลือ ${rem})`;
-                    delBtn.style.opacity = '';
-                }
+                // แสดง cache ก่อน แล้วอัปเดตหลัง sync
+                const updateDelBtn = () => {
+                    const q = getDeleteQuota();
+                    const rem = Math.max(0, DELETE_QUOTA_MAX - q.count);
+                    if (rem === 0) {
+                        delLabel.textContent = 'ลบได้เต็มแล้ว ⛔';
+                        delBtn.style.opacity = '0.5';
+                    } else {
+                        delLabel.textContent = `ลบงาน (เหลือ ${rem})`;
+                        delBtn.style.opacity = '';
+                    }
+                };
+                updateDelBtn();
+                // sync จาก Firestore แล้วอัปเดตอีกครั้ง
+                syncMyQuota().then(updateDelBtn);
             }
             const popup = document.getElementById('task-popup');
             const overlay = document.getElementById('popup-overlay');
@@ -2323,7 +2495,7 @@ service cloud.firestore {
                     </span>
                     <span class="text-xs text-slate-400 font-bold flex items-center gap-1">📅 ${task.date}${task.dateEnd && task.dateEnd !== task.date ? ' → ' + task.dateEnd : ''}</span>
                 </div>
-                ${task.reportNote ? `<div class="bg-emerald-50 border-l-4 border-emerald-500 p-3 rounded-xl text-sm text-emerald-800 italic">"${task.reportNote}"</div>` : ''}
+                ${task.reportNote ? `<div class="bg-emerald-50 border-l-4 border-emerald-500 p-3 rounded-xl text-sm text-emerald-800 italic">"${escapeHTML(task.reportNote)}"</div>` : ''}
                 ${renderSection(taskF, '📋 ไฟล์สั่งงาน', 'bg-purple-100 text-purple-700')}
                 ${renderSection(reportF, '✅ ไฟล์รายงาน', 'bg-emerald-100 text-emerald-700')}
                 ${!taskF.length && !reportF.length ? '<p class="text-center text-slate-400 py-6 italic">ไม่มีไฟล์แนบ</p>' : ''}`;
@@ -2428,7 +2600,7 @@ service cloud.firestore {
                         <span style="font-weight:700;color:#7c3aed">${t.teamId}</span><br>
                         <span style="font-size:10px;color:#64748b">${getLeader(t.teamId)}</span>
                     </td>
-                    <td style="padding:7px 10px;font-size:11px;border-bottom:1px solid #e2e8f0;">${t.title}</td>
+                    <td style="padding:7px 10px;font-size:11px;border-bottom:1px solid #e2e8f0;">${escapeHTML(t.title)}</td>
                     <td style="padding:7px 10px;font-size:11px;border-bottom:1px solid #e2e8f0;text-align:center;">${t.date}</td>
                     <td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;text-align:center;">
                         <span style="background:${STATUS_COLOR[t.status]}22;color:${STATUS_COLOR[t.status]};
@@ -2832,7 +3004,7 @@ service cloud.firestore {
                     <td class="px-4 py-3">
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-black" style="background:${getTeamColor(t.teamId)}22;color:${getTeamColor(t.teamId)}">${getLeader(t.teamId)}</span>
                     </td>
-                    <td class="px-4 py-3 text-xs text-slate-700 font-semibold max-w-[200px] truncate">${t.title}</td>
+                    <td class="px-4 py-3 text-xs text-slate-700 font-semibold max-w-[200px] truncate">${escapeHTML(t.title)}</td>
                     <td class="px-4 py-3 text-center">
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-black ${statusStyle[t.status] || ''}">${statusLabel[t.status] || t.status}</span>
                     </td>
@@ -2937,50 +3109,9 @@ service cloud.firestore {
             return result === 'granted';
         };
 
-        const fireNotif = (title, body) => {
+        const fireNotif = (title, body, tag = 'pea-auto') => {
             if (Notification.permission !== 'granted') return;
-            new Notification(title, { body, icon: 'icon-192.png', badge: 'icon-192.png', tag: 'pea-auto' });
-        };
-
-        // Core auto-notify runner — called once after data loads
-        window.runAutoNotify = async () => {
-            const ok = await ensureNotifPermission();
-            if (!ok) return;
-
-            const now = new Date();
-            const today = now.toISOString().slice(0,10);
-            const lastCheck = localStorage.getItem('pea_last_notify_check');
-            if (lastCheck === today) return; // already fired today
-            localStorage.setItem('pea_last_notify_check', today);
-
-            // 1. รายวัน: งานวันนี้ + งานค้างเกินกำหนด
-            const todayTasks = tasks.filter(t => t.date === today);
-            const overdue    = tasks.filter(t => t.status !== 'done' && t.date < today);
-
-            if (todayTasks.length > 0) {
-                const preview = todayTasks.slice(0,3).map((t,i) => `${i+1}. [${t.teamId}] ${t.title}`).join('\n');
-                const extra   = todayTasks.length > 3 ? `\n...และอีก ${todayTasks.length-3} งาน` : '';
-                fireNotif(`📅 งานวันนี้ มี ${todayTasks.length} งาน`, preview + extra);
-            }
-
-            if (overdue.length > 0) {
-                setTimeout(() => {
-                    fireNotif(`⚠️ มีงานค้างเกินกำหนด ${overdue.length} งาน`,
-                        overdue.slice(0,3).map(t => `• [${t.teamId}] ${t.title} (${t.date})`).join('\n'));
-                }, 2500);
-            }
-
-            // 2. รายสัปดาห์ทุกวันจันทร์
-            if (now.getDay() === 1) {
-                const done = tasks.filter(t => t.status==='done').length;
-                const prog = tasks.filter(t => t.status==='progress').length;
-                const pend = tasks.filter(t => t.status==='pending').length;
-                const pct  = tasks.length > 0 ? Math.round(done/tasks.length*100) : 0;
-                setTimeout(() => {
-                    fireNotif(`📊 สรุปงานประจำสัปดาห์ (${pct}% เสร็จ)`,
-                        `✅ สำเร็จ ${done} | 🔄 กำลังทำ ${prog} | ⏳ รอ ${pend}\nรวมทั้งหมด ${tasks.length} งาน`);
-                }, 5000);
-            }
+            new Notification(title, { body, icon: 'icon-192.png', badge: 'icon-192.png', tag });
         };
 
         // ══════════════════════════════════════════════════════════
@@ -3036,7 +3167,11 @@ service cloud.firestore {
                 renderLoginDots();
                 // Admin → register UID ลง Firestore เพื่อใช้กับ Security Rules
                 if (isAdminUser && firebaseUID) _registerAdminUID(firebaseUID);
-                setTimeout(() => { testLogPermission(); writeLog('login', {}); }, 800);
+                setTimeout(() => {
+                    testLogPermission();
+                    writeLog('login', {});
+                    syncMyQuota(); // sync quota จาก Firestore
+                }, 800);
             } else {
                 document.getElementById('login-error').textContent = '❌ ไม่พบรหัสพนักงาน กรุณาตรวจสอบอีกครั้ง';
                 _loginBuffer = '';
@@ -3071,8 +3206,8 @@ service cloud.firestore {
                         const adminBtn = document.getElementById('admin-panel-btn');
                         if (adminBtn) adminBtn.classList.toggle('hidden', !isAdminUser);
                         document.getElementById('login-screen').classList.add('hidden');
-                        // ทดสอบ permission หลัง restore session
-                        setTimeout(() => testLogPermission(), 1200);
+                        // ทดสอบ permission + sync quota จาก Firestore
+                        setTimeout(() => { testLogPermission(); syncMyQuota(); }, 1200);
                         return true;
                     }
                 }
@@ -3288,49 +3423,75 @@ service cloud.firestore {
             }
         };
 
-        const loadAdminQuota = () => {
+        const loadAdminQuota = async () => {
             const container = document.getElementById('admin-quota-list');
+            container.innerHTML = '<p class="text-slate-400 text-sm text-center py-6">กำลังโหลด...</p>';
             const today = new Date().toISOString().slice(0,10);
-            container.innerHTML = Object.entries(USERS).map(([code, name]) => {
-                let count = 0;
-                try {
-                    const raw = localStorage.getItem(`pea_del_quota_${code}`);
-                    if (raw) { const q = JSON.parse(raw); if (q.date === today) count = q.count; }
-                } catch {}
-                // Fallback to shared key for backward-compat
-                if (!count) try {
-                    const raw = localStorage.getItem('pea_del_quota');
-                    if (raw) { const q = JSON.parse(raw); if (q.date === today) count = q.count; }
-                } catch {}
-                const pct = Math.round(count / DELETE_QUOTA_MAX * 100);
-                const color = count >= DELETE_QUOTA_MAX ? '#dc2626' : count > 0 ? '#f59e0b' : '#16a34a';
-                const shortName = name.replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'');
-                return `<div class="quota-card">
-                    <div class="flex justify-between items-center mb-1.5">
-                        <span class="text-xs font-black text-slate-700">${shortName}</span>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs font-black" style="color:${color}">${count}/${DELETE_QUOTA_MAX}</span>
-                            <button onclick="adminResetQuota('${code}')" class="text-[10px] px-2 py-0.5 bg-slate-100 rounded-lg font-bold hover:bg-rose-100 hover:text-rose-600">รีเซ็ต</button>
+            try {
+                // ดึง quota ทุก user วันนี้จาก Firestore
+                const { query, where, getDocs } =
+                    await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+                const q = query(collection(db, 'delete_quotas'), where('date', '==', today));
+                const snap = await getDocs(q);
+                // สร้าง map userCode → count
+                const quotaMap = {};
+                snap.docs.forEach(d => { quotaMap[d.data().userCode] = d.data().count || 0; });
+
+                container.innerHTML = Object.entries(USERS).map(([code, name]) => {
+                    const count = quotaMap[code] || 0;
+                    const pct = Math.round(count / DELETE_QUOTA_MAX * 100);
+                    const color = count >= DELETE_QUOTA_MAX ? '#dc2626' : count > 0 ? '#f59e0b' : '#16a34a';
+                    const shortName = name.replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'');
+                    const isAdminUser = code === ADMIN_CODE;
+                    return `<div class="quota-card">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="text-xs font-black text-slate-700">${shortName}${isAdminUser ? ' 👑' : ''}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-black" style="color:${color}">${isAdminUser ? '∞' : `${count}/${DELETE_QUOTA_MAX}`}</span>
+                                ${isAdminUser ? '' : `<button onclick="adminResetQuota('${code}')" class="text-[10px] px-2 py-0.5 bg-slate-100 rounded-lg font-bold hover:bg-rose-100 hover:text-rose-600">รีเซ็ต</button>`}
+                            </div>
                         </div>
-                    </div>
-                    <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div style="width:${pct}%;background:${color};height:100%;border-radius:999px;transition:width 0.3s"></div>
-                    </div>
-                </div>`;
-            }).join('');
+                        ${isAdminUser ? '' : `<div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div style="width:${pct}%;background:${color};height:100%;border-radius:999px;transition:width 0.3s"></div>
+                        </div>`}
+                    </div>`;
+                }).join('');
+            } catch(e) {
+                container.innerHTML = `<p class="text-rose-500 text-sm text-center py-6 font-bold">โหลดไม่สำเร็จ: ${e.message}</p>`;
+            }
         };
 
-        window.adminResetQuota = (code) => {
-            localStorage.removeItem(`pea_del_quota_${code}`);
-            if (code === currentUser?.code) localStorage.removeItem('pea_del_quota');
-            loadAdminQuota();
-            showRealtimeToast(`รีเซ็ต quota ${(USERS[code]||code).replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'')} แล้ว`, '🔓');
+        window.adminResetQuota = async (code) => {
+            if (!isAdmin()) return;
+            const today = new Date().toISOString().slice(0,10);
+            const docId = `${code}_${today}`;
+            try {
+                await deleteDoc(doc(db, 'delete_quotas', docId));
+                // อัปเดต cache ด้วย
+                const cacheKey = `${code}:${today}`;
+                _quotaCache[cacheKey] = 0;
+                await loadAdminQuota();
+                showRealtimeToast(`รีเซ็ต quota ${(USERS[code]||code).replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'')} แล้ว`, '🔓');
+            } catch(e) { alert('รีเซ็ตไม่สำเร็จ: ' + e.message); }
         };
-        window.adminResetAllQuota = () => {
-            Object.keys(USERS).forEach(c => localStorage.removeItem(`pea_del_quota_${c}`));
-            localStorage.removeItem('pea_del_quota');
-            loadAdminQuota();
-            showRealtimeToast('รีเซ็ต quota ทุกคนแล้ว 🔓', '✅');
+
+        window.adminResetAllQuota = async () => {
+            if (!confirm('รีเซ็ต quota ลบงานของทุกคนวันนี้?')) return;
+            const today = new Date().toISOString().slice(0,10);
+            try {
+                const { query, where, getDocs, writeBatch } =
+                    await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+                const q = query(collection(db, 'delete_quotas'), where('date', '==', today));
+                const snap = await getDocs(q);
+                // ใช้ batch delete เพื่อประหยัด write operations
+                const batch = writeBatch(db);
+                snap.docs.forEach(d => batch.delete(d.ref));
+                await batch.commit();
+                // ล้าง memory cache
+                _quotaCache = {};
+                await loadAdminQuota();
+                showRealtimeToast('รีเซ็ต quota ทุกคนแล้ว 🔓', '✅');
+            } catch(e) { alert('รีเซ็ตไม่สำเร็จ: ' + e.message); }
         };
 
         const loadAdminStats = () => {
@@ -3492,6 +3653,13 @@ service cloud.firestore {
       allow update, delete: if isAdminUID();
     }
 
+    // ── delete_quotas: user เขียนเองได้ / Admin อ่าน+รีเซ็ตได้ทุก doc ──
+    match /delete_quotas/{docId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isAdminUID();
+    }
+
     // ── notes: อ่าน/เขียนได้ทุก anonymous ──
     match /notes/{noteId} {
       allow read, write: if isSignedIn();
@@ -3568,8 +3736,256 @@ service cloud.firestore {
             });
         };
 
+        // ══════════════════════════════════════════════════════════
+        // PRIORITY 5: ADVANCED SEARCH
+        // ══════════════════════════════════════════════════════════
+        let _advFilters = { team: '', status: '', dateFrom: '', dateTo: '' };
+
+        window.toggleAdvSearch = () => {
+            const panel = document.getElementById('adv-search-panel');
+            const btn   = document.getElementById('adv-search-btn');
+            const isOpen = panel.classList.contains('open');
+            panel.classList.toggle('open', !isOpen);
+            btn.classList.toggle('bg-purple-50', !isOpen);
+            btn.classList.toggle('border-purple-200', !isOpen);
+            btn.classList.toggle('text-purple-700', !isOpen);
+            // populate team dropdown on first open
+            if (!isOpen) _populateAdvTeams();
+        };
+
+        const _populateAdvTeams = () => {
+            const sel = document.getElementById('adv-team');
+            if (!sel || sel.options.length > 1) return;
+            TEAMS.forEach(t => {
+                const o = document.createElement('option');
+                o.value = t.id; o.textContent = `${t.id}: ${t.name}`;
+                sel.appendChild(o);
+            });
+        };
+
+        window.applyAdvSearch = () => {
+            _advFilters = {
+                team:     document.getElementById('adv-team')?.value     || '',
+                status:   document.getElementById('adv-status')?.value   || '',
+                dateFrom: document.getElementById('adv-date-from')?.value || '',
+                dateTo:   document.getElementById('adv-date-to')?.value   || '',
+            };
+            const count = Object.values(_advFilters).filter(Boolean).length;
+            const badge = document.getElementById('adv-active-count');
+            if (badge) {
+                badge.textContent = count;
+                badge.classList.toggle('hidden', count === 0);
+            }
+            scheduleRender();
+        };
+
+        window.clearAdvSearch = () => {
+            _advFilters = { team:'', status:'', dateFrom:'', dateTo:'' };
+            ['adv-team','adv-status','adv-date-from','adv-date-to'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            const badge = document.getElementById('adv-active-count');
+            if (badge) badge.classList.add('hidden');
+            scheduleRender();
+        };
+
+        // Apply advanced filters on top of existing search + task data
+        const applyFiltersToTasks = (data) => {
+            let result = data;
+            if (_advFilters.team)     result = result.filter(t => t.teamId === _advFilters.team);
+            if (_advFilters.status)   result = result.filter(t => t.status === _advFilters.status);
+            if (_advFilters.dateFrom) result = result.filter(t => (t.dateEnd || t.date) >= _advFilters.dateFrom);
+            if (_advFilters.dateTo)   result = result.filter(t => t.date <= _advFilters.dateTo);
+            // Update result label
+            const label = document.getElementById('adv-result-label');
+            if (label) {
+                const active = Object.values(_advFilters).filter(Boolean).length;
+                label.textContent = active > 0 ? `พบ ${result.length} รายการ จาก ${data.length}` : '';
+            }
+            return result;
+        };
+
+        // ══════════════════════════════════════════════════════════
+        // PRIORITY 6: OFFLINE INDICATOR + ACTION QUEUE
+        // ══════════════════════════════════════════════════════════
+        let _offlineQueue = [];   // { fn, label } — queued actions to retry
+        let _isOnline = navigator.onLine;
+
+        const _showOfflineBanner = (online, queueLen = 0) => {
+            const banner = document.getElementById('offline-banner');
+            const inner  = document.getElementById('offline-banner-inner');
+            const icon   = document.getElementById('offline-icon');
+            const msg    = document.getElementById('offline-msg');
+            const badge  = document.getElementById('offline-queue-badge');
+            const retry  = document.getElementById('offline-retry-btn');
+            if (!banner) return;
+
+            if (!online) {
+                banner.classList.add('show');
+                inner.className = 'offline';
+                icon.textContent = '📡';
+                msg.textContent = 'ไม่มีสัญญาณอินเทอร์เน็ต';
+                badge.textContent = queueLen;
+                badge.classList.toggle('hidden', queueLen === 0);
+                retry.classList.add('hidden');
+            } else if (queueLen > 0) {
+                banner.classList.add('show');
+                inner.className = 'online';
+                icon.textContent = '✅';
+                msg.textContent = `กลับมาออนไลน์ — มี ${queueLen} งานรอ sync`;
+                badge.classList.add('hidden');
+                retry.classList.remove('hidden');
+                // Auto-retry after 1s
+                setTimeout(() => retryOfflineQueue(), 1000);
+            } else {
+                // Online and no queue — flash green then hide
+                banner.classList.add('show');
+                inner.className = 'online';
+                icon.textContent = '✅';
+                msg.textContent = 'กลับมาออนไลน์แล้ว';
+                badge.classList.add('hidden');
+                retry.classList.add('hidden');
+                setTimeout(() => banner.classList.remove('show'), 2500);
+            }
+        };
+
+        window.retryOfflineQueue = async () => {
+            if (_offlineQueue.length === 0) {
+                document.getElementById('offline-banner').classList.remove('show');
+                return;
+            }
+            const toRetry = [..._offlineQueue];
+            _offlineQueue = [];
+            let failed = 0;
+            for (const item of toRetry) {
+                try { await item.fn(); }
+                catch(e) { _offlineQueue.push(item); failed++; }
+            }
+            if (failed > 0) {
+                showRealtimeToast(`sync ไม่สำเร็จ ${failed} รายการ`, '⚠️');
+            } else {
+                showRealtimeToast('sync ทุกรายการสำเร็จ ✅', '🔄');
+                document.getElementById('offline-banner').classList.remove('show');
+            }
+            _showOfflineBanner(navigator.onLine, _offlineQueue.length);
+        };
+
+        // Queue a Firestore write for offline retry
+        const withOfflineQueue = (label, fn) => {
+            if (navigator.onLine) return fn();
+            _offlineQueue.push({ label, fn });
+            _showOfflineBanner(false, _offlineQueue.length);
+            showRealtimeToast(`บันทึกไว้รอ sync: ${label}`, '📥');
+            return Promise.resolve();
+        };
+
+        const _initOfflineMonitor = () => {
+            window.addEventListener('online', () => {
+                _isOnline = true;
+                _showOfflineBanner(true, _offlineQueue.length);
+            });
+            window.addEventListener('offline', () => {
+                _isOnline = false;
+                _showOfflineBanner(false, _offlineQueue.length);
+            });
+            // Check on init
+            if (!navigator.onLine) _showOfflineBanner(false, 0);
+        };
+
+        // ══════════════════════════════════════════════════════════
+        // PRIORITY 4: ENHANCED REMINDER — 1 day and 3 days ahead
+        // ══════════════════════════════════════════════════════════
+        const _remindedKey = () => `pea_reminded_${new Date().toISOString().slice(0,10)}`;
+
+        const _getRemindedSet = () => {
+            try { return new Set(JSON.parse(localStorage.getItem(_remindedKey()) || '[]')); }
+            catch { return new Set(); }
+        };
+        const _saveRemindedSet = (set) => {
+            localStorage.setItem(_remindedKey(), JSON.stringify([...set]));
+        };
+
+        window.runAutoNotify = async () => {
+            const ok = await ensureNotifPermission();
+            if (!ok) return;
+
+            const now   = new Date();
+            const today = now.toISOString().slice(0,10);
+            const reminded = _getRemindedSet();
+
+            const addDays = (d, n) => {
+                const dt = new Date(d + 'T00:00:00');
+                dt.setDate(dt.getDate() + n);
+                return dt.toISOString().slice(0,10);
+            };
+            const in1day  = addDays(today, 1);
+            const in3days = addDays(today, 3);
+
+            let delay = 0;
+            const fire = (title, body, tag) => {
+                if (!reminded.has(tag)) {
+                    setTimeout(() => fireNotif(title, body, tag), delay);
+                    delay += 2000;
+                    reminded.add(tag);
+                }
+            };
+
+            // ── งานวันนี้ ──────────────────────────────────────
+            const todayTasks = tasks.filter(t => t.status !== 'done' && t.date === today);
+            if (todayTasks.length > 0) {
+                const preview = todayTasks.slice(0,3).map((t,i) => `${i+1}. [${t.teamId}] ${t.title}`).join('\n');
+                fire(`📅 งานวันนี้ ${todayTasks.length} งาน`, preview + (todayTasks.length>3 ? `\n+${todayTasks.length-3} งาน` : ''), `today_${today}`);
+            }
+
+            // ── งานค้างเกินกำหนด ───────────────────────────────
+            const overdue = tasks.filter(t => t.status !== 'done' && t.date < today);
+            if (overdue.length > 0) {
+                fire(`⚠️ งานค้างเกินกำหนด ${overdue.length} งาน`,
+                    overdue.slice(0,3).map(t => `• [${t.teamId}] ${t.title} (${t.date})`).join('\n'),
+                    `overdue_${today}`);
+            }
+
+            // ── แจ้งเตือนล่วงหน้า 1 วัน ────────────────────────
+            const remind1 = tasks.filter(t => t.status !== 'done' && (t.date === in1day || (t.dateEnd && t.dateEnd === in1day)));
+            remind1.forEach(t => {
+                fire(`⏰ งานพรุ่งนี้: ${t.title}`,
+                    `ทีม: ${getLeaderCached(t.teamId)}\nวันที่: ${t.date}${t.dateEnd && t.dateEnd !== t.date ? ' → ' + t.dateEnd : ''}`,
+                    `remind1_${t.id}_${today}`);
+            });
+
+            // ── แจ้งเตือนล่วงหน้า 3 วัน ────────────────────────
+            const remind3 = tasks.filter(t => t.status !== 'done' && (t.date === in3days || (t.dateEnd && t.dateEnd === in3days)));
+            remind3.forEach(t => {
+                fire(`📌 งานใน 3 วัน: ${t.title}`,
+                    `ทีม: ${getLeaderCached(t.teamId)}\nวันที่: ${t.date}${t.dateEnd && t.dateEnd !== t.date ? ' → ' + t.dateEnd : ''}`,
+                    `remind3_${t.id}_${today}`);
+            });
+
+            // ── สรุปรายสัปดาห์ทุกวันจันทร์ ─────────────────────
+            if (now.getDay() === 1) {
+                const done = tasks.filter(t => t.status==='done').length;
+                const prog = tasks.filter(t => t.status==='progress').length;
+                const pend = tasks.filter(t => t.status==='pending').length;
+                const pct  = tasks.length > 0 ? Math.round(done/tasks.length*100) : 0;
+                fire(`📊 สรุปงานประจำสัปดาห์ (${pct}% เสร็จ)`,
+                    `✅ สำเร็จ ${done} | 🔄 กำลังทำ ${prog} | ⏳ รอ ${pend}\nรวม ${tasks.length} งาน`,
+                    `weekly_${today}`);
+            }
+
+            _saveRemindedSet(reminded);
+        };
+
+        // Re-run reminder check when app regains focus (user switches back)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && typeof runAutoNotify === 'function' && currentUser) {
+                setTimeout(runAutoNotify, 1500);
+            }
+        });
+
         init();
         restoreSession();
+        _initOfflineMonitor();
         setTimeout(updateNotifBadge, 1500);
         // ── Deep-link handler ──────────────────────────────────────
         // Reads ?task=TASK_ID&date=YYYY-MM-DD from URL and jumps there
