@@ -446,6 +446,7 @@
                 <button onclick="adminTab('log')" id="atab-log" class="px-5 py-3 whitespace-nowrap border-b-2 border-purple-600 text-purple-700">📋 Log</button>
                 <button onclick="adminTab('quota')" id="atab-quota" class="px-5 py-3 whitespace-nowrap border-b-2 border-transparent text-slate-400">📊 Quota</button>
                 <button onclick="adminTab('users')" id="atab-users" class="px-5 py-3 whitespace-nowrap border-b-2 border-transparent text-slate-400">👤 Users</button>
+                <button onclick="adminTab('rules')" id="atab-rules" class="px-5 py-3 whitespace-nowrap border-b-2 border-transparent text-slate-400">🔐 Rules</button>
                 <button onclick="adminTab('stats')" id="atab-stats" class="px-5 py-3 whitespace-nowrap border-b-2 border-transparent text-slate-400">📈 สถิติ</button>
             </div>
             <div id="apanel-log" class="p-4">
@@ -518,6 +519,39 @@ service cloud.firestore {
                     <button onclick="saveUsersToFirestore()" class="flex-2 px-6 py-2.5 brand-primary text-white rounded-xl text-sm font-black shadow-lg shadow-purple-200">💾 บันทึก — sync ทุกเครื่อง</button>
                 </div>
             </div>
+            <div id="apanel-rules" class="p-4 hidden">
+                <div id="rules-status-row" class="flex items-center gap-3 mb-4 p-3 rounded-2xl border" style="background:#f0fdf4;border-color:#bbf7d0">
+                    <span id="rules-status-icon" style="font-size:20px">⏳</span>
+                    <div>
+                        <div id="rules-status-title" class="font-black text-sm text-slate-700">กำลังตรวจสอบ...</div>
+                        <div id="rules-status-sub" class="text-xs text-slate-400 font-bold mt-0.5"></div>
+                    </div>
+                </div>
+
+                <p class="text-xs text-slate-400 font-bold mb-2">คัดลอก Rules ด้านล่างนี้ไปวางใน Firebase Console → Firestore → Rules แล้วกด Publish</p>
+
+                <div class="relative mb-3">
+                    <pre id="fs-rules-block" class="bg-slate-900 text-green-400 rounded-2xl p-4 text-[11px] font-mono overflow-x-auto whitespace-pre leading-relaxed select-all"></pre>
+                    <button onclick="copyFSRules()" class="absolute top-3 right-3 bg-purple-600 text-white text-[10px] font-black px-3 py-1.5 rounded-xl hover:bg-purple-700 transition-all">📋 คัดลอก</button>
+                </div>
+
+                <a id="firebase-rules-link" href="https://console.firebase.google.com/project/pea-task-manager/firestore/rules" target="_blank"
+                   class="flex items-center justify-center gap-2 w-full py-2.5 bg-orange-50 text-orange-700 border border-orange-200 rounded-xl text-sm font-black hover:bg-orange-100 transition-all">
+                   🌐 เปิด Firebase Console → Rules
+                </a>
+
+                <div class="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-2xl text-xs text-blue-700 font-bold space-y-1 leading-relaxed">
+                    <div class="font-black text-sm mb-2">📖 อธิบาย Rules นี้</div>
+                    <div>✅ <code>tasks</code> — อ่านได้ทุก anonymous user / เขียนได้เฉพาะคนที่ login Firebase</div>
+                    <div>✅ <code>audit_logs</code> — เขียนได้ทุก anonymous user / อ่านได้เฉพาะ Admin UID</div>
+                    <div>✅ <code>config/holidays</code> — อ่านได้ทุกคน / เขียนได้เฉพาะ Admin UID</div>
+                    <div>✅ <code>config/users</code> — อ่านได้ทุกคน / เขียนได้เฉพาะ Admin UID</div>
+                    <div>✅ <code>config/adminUIDs</code> — อ่านได้ทุก anonymous / เขียนได้เฉพาะ Admin UID</div>
+                    <div>✅ <code>notes</code> — อ่าน/เขียนได้ทุก anonymous user</div>
+                    <div class="pt-1 text-blue-500">ℹ️ Admin UID คือ Firebase anonymous UID ของ device ที่ login รหัส 489961</div>
+                </div>
+            </div>
+
             <div id="apanel-stats" class="p-4 hidden">
                 <div id="admin-stats-content" class="grid grid-cols-2 gap-3"></div>
             </div>
@@ -974,7 +1008,7 @@ service cloud.firestore {
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, serverTimestamp, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref as sRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
         const firebaseConfig = {
@@ -1202,7 +1236,7 @@ service cloud.firestore {
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app); db = getFirestore(app); storage = getStorage(app);
                 // Expose Firestore helpers for holiday/users sync
-                window._fsRefs = { doc, setDoc, onSnapshot, collection };
+                window._fsRefs = { doc, setDoc, onSnapshot, collection, getDoc };
 
                 // Timeout 10s
                 const authPromise = signInAnonymously(auth);
@@ -1956,7 +1990,26 @@ service cloud.firestore {
         // ROLE & DELETE QUOTA SYSTEM
         // ════════════════════════════════════════════════════════
         const ADMIN_CODE = '489961';
+        // UID ของ Admin anonymous session (โหลดจาก Firestore)
+        let _knownAdminUIDs = new Set();
         const isAdmin = () => currentUser?.code === ADMIN_CODE;
+        // ตรวจสอบ Admin จาก UID (สำหรับ Firestore Rules)
+        const getMyUID = () => auth?.currentUser?.uid || null;
+
+        // บันทึก UID ของ Admin ลง Firestore config/adminUIDs
+        const _registerAdminUID = async (uid) => {
+            try {
+                const { doc: fsDoc, getDoc, setDoc: fsSetDoc } = window._fsRefs || {};
+                if (!fsSetDoc) return;
+                const ref = fsDoc(db, 'config', 'adminUIDs');
+                const snap = await getDoc(ref);
+                const existing = snap.exists() ? (snap.data().uids || []) : [];
+                if (!existing.includes(uid)) {
+                    await fsSetDoc(ref, { uids: [...existing, uid], updatedAt: new Date().toISOString() });
+                    console.log('[Admin] UID registered:', uid);
+                }
+            } catch(e) { console.warn('[Admin] UID register failed (Rules ยังไม่ได้ตั้ง?):', e.message); }
+        };
 
         // ── Admin gate: shows alert if not admin, otherwise runs fn ──
         window.adminGate = (fn) => {
@@ -2966,7 +3019,8 @@ service cloud.firestore {
         window.loginSubmit = () => {
             const name = USERS[_loginBuffer];
             if (name) {
-                currentUser = { code: _loginBuffer, name };
+                const firebaseUID = auth?.currentUser?.uid || null;
+                currentUser = { code: _loginBuffer, name, uid: firebaseUID };
                 const shortName = name.replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'');
                 const isAdminUser = _loginBuffer === ADMIN_CODE;
                 document.getElementById('nav-user-name').innerHTML =
@@ -2974,14 +3028,14 @@ service cloud.firestore {
                         ? ' <span style="background:#7c3aed;color:white;font-size:9px;padding:1px 5px;border-radius:6px;font-weight:900;vertical-align:middle;">ADMIN</span>'
                         : '');
                 document.getElementById('nav-user').classList.remove('hidden');
-                // Show/hide Admin panel button
                 const adminBtn = document.getElementById('admin-panel-btn');
                 if (adminBtn) adminBtn.classList.toggle('hidden', !isAdminUser);
                 document.getElementById('login-screen').classList.add('hidden');
                 localStorage.setItem('pea_session', JSON.stringify(currentUser));
                 _loginBuffer = '';
                 renderLoginDots();
-                // ทดสอบ permission + บันทึก login log
+                // Admin → register UID ลง Firestore เพื่อใช้กับ Security Rules
+                if (isAdminUser && firebaseUID) _registerAdminUID(firebaseUID);
                 setTimeout(() => { testLogPermission(); writeLog('login', {}); }, 800);
             } else {
                 document.getElementById('login-error').textContent = '❌ ไม่พบรหัสพนักงาน กรุณาตรวจสอบอีกครั้ง';
@@ -3004,6 +3058,8 @@ service cloud.firestore {
                 if (s) {
                     const u = JSON.parse(s);
                     if (u && USERS[u.code]) {
+                        // รวม firebase UID ปัจจุบัน (อาจต่างจาก session เดิม)
+                        u.uid = auth?.currentUser?.uid || u.uid || null;
                         currentUser = u;
                         const sn = u.name.replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'');
                         const isAdminUser = u.code === ADMIN_CODE;
@@ -3162,21 +3218,17 @@ service cloud.firestore {
         };
 
         window.adminTab = (tab) => {
-            ['log','quota','users','stats'].forEach(t => {
+            ['log','quota','users','rules','stats'].forEach(t => {
                 document.getElementById(`apanel-${t}`).classList.toggle('hidden', t !== tab);
                 const btn = document.getElementById(`atab-${t}`);
                 if (!btn) return;
-                if (t === tab) {
-                    btn.style.borderBottomColor = '#7c3aed';
-                    btn.style.color = '#7c3aed';
-                } else {
-                    btn.style.borderBottomColor = 'transparent';
-                    btn.style.color = '#94a3b8';
-                }
+                if (t === tab) { btn.style.borderBottomColor = '#7c3aed'; btn.style.color = '#7c3aed'; }
+                else { btn.style.borderBottomColor = 'transparent'; btn.style.color = '#94a3b8'; }
             });
             if (tab === 'log')   loadAdminLogs();
             if (tab === 'quota') loadAdminQuota();
             if (tab === 'users') loadUsersPanel();
+            if (tab === 'rules') loadRulesPanel();
             if (tab === 'stats') loadAdminStats();
         };
 
@@ -3405,6 +3457,115 @@ service cloud.firestore {
             if (!confirm('รีเซ็ต User list กลับค่าเริ่มต้น?')) return;
             _pendingUsers = { ...DEFAULT_USERS };
             renderUserList();
+        };
+
+        // ══════════════════════════════════════════════════════════
+        // FIRESTORE SECURITY RULES PANEL
+        // ══════════════════════════════════════════════════════════
+        const FIRESTORE_RULES = `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── helper: ตรวจว่าเป็น anonymous user ที่ login Firebase ──
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // ── helper: ตรวจว่าเป็น Admin UID (เก็บใน config/adminUIDs) ──
+    function isAdminUID() {
+      return isSignedIn() &&
+        request.auth.uid in get(/databases/$(database)/documents/config/adminUIDs).data.uids;
+    }
+
+    // ── tasks: อ่านได้ทุก anonymous / เขียนต้อง sign-in ──
+    match /tasks/{taskId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
+    }
+
+    // ── audit_logs: เขียนได้ทุก anonymous / อ่านได้เฉพาะ Admin ──
+    match /audit_logs/{logId} {
+      allow read: if isAdminUID();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdminUID();
+    }
+
+    // ── notes: อ่าน/เขียนได้ทุก anonymous ──
+    match /notes/{noteId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // ── config/holidays: อ่านได้ทุกคน / เขียนเฉพาะ Admin ──
+    match /config/holidays {
+      allow read: if isSignedIn();
+      allow write: if isAdminUID();
+    }
+
+    // ── config/users: อ่านได้ทุกคน / เขียนเฉพาะ Admin ──
+    match /config/users {
+      allow read: if isSignedIn();
+      allow write: if isAdminUID();
+    }
+
+    // ── config/adminUIDs: Admin UID list ──
+    match /config/adminUIDs {
+      allow read: if isSignedIn();
+      allow write: if isAdminUID()
+        || (isSignedIn() && !exists(/databases/$(database)/documents/config/adminUIDs));
+    }
+  }
+}`;
+
+        const loadRulesPanel = async () => {
+            // แสดง Rules text
+            const block = document.getElementById('fs-rules-block');
+            if (block) block.textContent = FIRESTORE_RULES;
+
+            // ตรวจสอบสถานะ UID ปัจจุบัน
+            const uid = getMyUID();
+            const titleEl = document.getElementById('rules-status-title');
+            const subEl   = document.getElementById('rules-status-sub');
+            const iconEl  = document.getElementById('rules-status-icon');
+            const rowEl   = document.getElementById('rules-status-row');
+
+            if (!uid) {
+                iconEl.textContent = '⚠️';
+                titleEl.textContent = 'ไม่พบ Firebase UID';
+                subEl.textContent = 'กรุณา reload และ login ใหม่';
+                rowEl.style.background = '#fef9c3'; rowEl.style.borderColor = '#fde047';
+                return;
+            }
+
+            // ทดสอบเขียน audit_logs (proxy for rules check)
+            try {
+                const testRef = await addDoc(collection(db, 'audit_logs'), {
+                    action: '__rules_test__', tsMs: Date.now(), ts: serverTimestamp(), userCode: 'system'
+                });
+                await deleteDoc(doc(db, 'audit_logs', testRef.id));
+                // สำเร็จ → rules ok
+                iconEl.textContent = '✅';
+                titleEl.textContent = 'Firestore Rules ทำงานปกติ';
+                subEl.textContent = `Admin UID: ${uid.slice(0,8)}…`;
+                rowEl.style.background = '#f0fdf4'; rowEl.style.borderColor = '#bbf7d0';
+                window._logWorking = true;
+            } catch(e) {
+                iconEl.textContent = '❌';
+                titleEl.textContent = 'Rules ยังไม่ถูกตั้งค่า — คัดลอกและ Publish ด้านล่างก่อน';
+                subEl.textContent = `UID ของคุณ: ${uid.slice(0,8)}… · Error: ${e.code || e.message}`;
+                rowEl.style.background = '#fff1f2'; rowEl.style.borderColor = '#fecdd3';
+                window._logWorking = false;
+            }
+        };
+
+        window.copyFSRules = () => {
+            navigator.clipboard.writeText(FIRESTORE_RULES).then(() => {
+                showRealtimeToast('คัดลอก Rules แล้ว — ไปวางใน Firebase Console', '📋');
+            }).catch(() => {
+                const el = document.getElementById('fs-rules-block');
+                if (el) { const r = document.createRange(); r.selectNode(el); window.getSelection().removeAllRanges(); window.getSelection().addRange(r); }
+            });
         };
 
         init();
