@@ -95,7 +95,146 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Sarabun', sans-serif; background-color: #f1f5f9; color: #1e293b; margin: 0; }
-        .brand-primary { background-color: #7c3aed; }
+        /* ══════════════════════════════════════════════════════
+           DARK MODE — CSS custom properties
+        ══════════════════════════════════════════════════════ */
+        :root {
+            --bg-base:      #f1f5f9;
+            --bg-card:      #ffffff;
+            --bg-nav:       rgba(255,255,255,0.85);
+            --bg-input:     #ffffff;
+            --bg-secondary: #f8fafc;
+            --text-primary: #0f172a;
+            --text-secondary:#64748b;
+            --text-tertiary:#94a3b8;
+            --border:       #e2e8f0;
+            --border-focus: #7c3aed;
+            --shadow-sm:    0 1px 3px rgba(0,0,0,0.08);
+            --chip-bg:      rgba(124,58,237,0.08);
+            --chip-text:    #6d28d9;
+        }
+        [data-theme="dark"] {
+            --bg-base:      #0f172a;
+            --bg-card:      #1e293b;
+            --bg-nav:       rgba(15,23,42,0.9);
+            --bg-input:     #1e293b;
+            --bg-secondary: #162032;
+            --text-primary: #f1f5f9;
+            --text-secondary:#94a3b8;
+            --text-tertiary:#64748b;
+            --border:       #334155;
+            --border-focus: #a78bfa;
+            --shadow-sm:    0 1px 3px rgba(0,0,0,0.4);
+            --chip-bg:      rgba(167,139,250,0.15);
+            --chip-text:    #c4b5fd;
+        }
+        /* Apply variables to Tailwind-style classes */
+        [data-theme="dark"] body                           { background: var(--bg-base); color: var(--text-primary); }
+
+        /* bg-white → dark card, BUT exclude buttons with colored backgrounds */
+        [data-theme="dark"] .bg-white:not(button):not([class*="brand-primary"]):not([class*="bg-emerald"]):not([class*="bg-purple"]):not([class*="bg-indigo"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-blue"]) { background: var(--bg-card) !important; }
+
+        /* ── Protect colored buttons from dark mode bg override ── */
+        [data-theme="dark"] .brand-primary               { background-color: #6d28d9 !important; color: white !important; }
+        [data-theme="dark"] button.brand-primary,
+        [data-theme="dark"] div.brand-primary             { background-color: #6d28d9 !important; color: white !important; }
+        [data-theme="dark"] .bg-emerald-600              { background-color: #059669 !important; color: white !important; }
+        [data-theme="dark"] .bg-emerald-50               { background: rgba(16,185,129,0.12) !important; }
+        [data-theme="dark"] .bg-rose-50                  { background: rgba(239,68,68,0.12) !important; }
+        [data-theme="dark"] .bg-amber-50                 { background: rgba(245,158,11,0.12) !important; }
+        [data-theme="dark"] .bg-indigo-50                { background: rgba(99,102,241,0.12) !important; }
+        [data-theme="dark"] .bg-blue-50                  { background: rgba(59,130,246,0.12) !important; }
+        [data-theme="dark"] .bg-purple-50                { background: rgba(124,58,237,0.12) !important; }
+
+        /* ── Form labels — force visible in dark ── */
+        [data-theme="dark"] label,
+        [data-theme="dark"] .adv-filter-label             { color: var(--text-secondary) !important; }
+        [data-theme="dark"] .text-[10px].font-black.uppercase { color: var(--text-tertiary) !important; }
+
+        [data-theme="dark"] .bg-slate-50,
+        [data-theme="dark"] .bg-slate-50\/50              { background: var(--bg-secondary) !important; }
+        [data-theme="dark"] .bg-slate-100                 { background: #1e2d3f !important; }
+        [data-theme="dark"] .bg-slate-200                 { background: #243245 !important; }
+        [data-theme="dark"] body                          { background-color: var(--bg-base) !important; }
+        [data-theme="dark"] .border-slate-100,
+        [data-theme="dark"] .border-slate-200             { border-color: var(--border) !important; }
+        [data-theme="dark"] .text-slate-800,
+        [data-theme="dark"] .text-slate-900,
+        [data-theme="dark"] .text-slate-700               { color: var(--text-primary) !important; }
+        [data-theme="dark"] .text-slate-600,
+        [data-theme="dark"] .text-slate-500               { color: var(--text-secondary) !important; }
+        [data-theme="dark"] .text-slate-400,
+        [data-theme="dark"] .text-slate-300               { color: var(--text-tertiary) !important; }
+        [data-theme="dark"] nav                            { background: var(--bg-nav) !important; border-color: var(--border) !important; }
+        [data-theme="dark"] input,
+        [data-theme="dark"] select,
+        [data-theme="dark"] textarea                       { background: var(--bg-input) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
+        [data-theme="dark"] .modal-content                { background: var(--bg-card) !important; color: var(--text-primary) !important; }
+        /* Modal headers — keep their gradient/color */
+        [data-theme="dark"] .modal-content .bg-slate-50  { background: var(--bg-secondary) !important; }
+        [data-theme="dark"] .modal-content .bg-emerald-50 { background: rgba(16,185,129,0.1) !important; }
+        [data-theme="dark"] .modal-content .text-emerald-900 { color: #6ee7b7 !important; }
+        [data-theme="dark"] .calendar-cell                { background: var(--bg-card); }
+        [data-theme="dark"] .calendar-cell.empty          { background: var(--bg-secondary); }
+        [data-theme="dark"] .adv-filter-input             { background: var(--bg-input) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
+        [data-theme="dark"] #adv-search-panel             { background: var(--bg-card) !important; border-color: var(--border) !important; }
+        [data-theme="dark"] #loading                      { background: #0f172a !important; }
+        [data-theme="dark"] .quota-card                   { background: var(--bg-secondary) !important; border-color: var(--border) !important; }
+        [data-theme="dark"] .log-row                      { border-color: var(--border) !important; }
+        [data-theme="dark"] .user-row                     { background: var(--bg-secondary) !important; border-color: var(--border) !important; }
+        [data-theme="dark"] .rounded-3xl.border,
+        [data-theme="dark"] .rounded-2xl.border           { border-color: var(--border) !important; }
+        [data-theme="dark"] #count-total                  { color: #f1f5f9 !important; }
+        [data-theme="dark"] .calendar-cell.today          { background: #1e1b4b !important; }
+        [data-theme="dark"] .calendar-cell.today .date-num { background: #7c3aed !important; color: white !important; }
+        [data-theme="dark"] .date-num                     { color: var(--text-primary) !important; }
+        [data-theme="dark"] .calendar-day-label           { background: var(--bg-secondary) !important; color: var(--text-secondary) !important; }
+        [data-theme="dark"] .bg-white.p-1.rounded-2xl     { background: var(--bg-card) !important; }
+        [data-theme="dark"] .note-card                    { background: var(--bg-secondary) !important; border-color: var(--border) !important; }
+        [data-theme="dark"] .stat-card                    { background: var(--bg-card) !important; border-color: var(--border) !important; }
+        /* Stat filter buttons */
+        [data-theme="dark"] #sf-all,
+        [data-theme="dark"] #sf-pending,
+        [data-theme="dark"] #sf-progress,
+        [data-theme="dark"] #sf-done                      { opacity: 0.85; }
+
+        /* ── Dark mode login screen ─────────────────────────── */
+        [data-theme="dark"] #login-screen                 { background: linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4c1d95 100%); }
+        [data-theme="dark"] .login-box                    { background: #1e293b; }
+        [data-theme="dark"] .login-key                    { background: #334155; color: #f1f5f9; }
+        [data-theme="dark"] .login-key:hover,
+        [data-theme="dark"] .login-key:active             { background: #7c3aed; color: white; }
+        [data-theme="dark"] #login-user-preview           { color: #94a3b8; }
+        [data-theme="dark"] .login-pin-dot                { background: #334155; }
+        [data-theme="dark"] .login-pin-dot.filled         { background: #a78bfa; }
+        [data-theme="dark"] #admin-confirm-step .font-black { color: #f1f5f9 !important; }
+
+        /* ── Brand primary — define explicitly so dark mode can override ── */
+        .brand-primary { background-color: #7c3aed !important; color: white !important; }
+
+        /* ── Chip dark mode (status colors preserved) ────────── */
+        [data-theme="dark"] .task-chip                    { border-color: rgba(255,255,255,0.12) !important; }
+        [data-theme="dark"] .task-chip-pending            { background: rgba(245,158,11,0.18) !important; color: #fcd34d !important; border-left-color: #f59e0b !important; }
+        [data-theme="dark"] .task-chip-progress           { background: rgba(59,130,246,0.18) !important; color: #93c5fd !important; border-left-color: #3b82f6 !important; }
+        [data-theme="dark"] .task-chip-done               { background: rgba(16,185,129,0.18) !important; color: #6ee7b7 !important; border-left-color: #10b981 !important; }
+        [data-theme="dark"] .task-chip .chip-leader       { color: inherit !important; }
+        [data-theme="dark"] .task-chip .chip-title        { color: inherit !important; opacity: 0.85; }
+        [data-theme="dark"] .holiday-chip                 { background: rgba(239,68,68,0.18) !important; border-color: rgba(239,68,68,0.35) !important; color: #fca5a5 !important; }
+
+        /* ── Creator / Updater badge ─────────────────────────── */
+        .creator-badge { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700; color:var(--text-tertiary,#94a3b8); }
+        .creator-badge .dot { width:4px; height:4px; border-radius:50%; background:currentColor; flex-shrink:0; }
+
+        /* ── Swipe to update status ──────────────────────────── */
+        .swipe-container { position:relative; overflow:hidden; border-radius:inherit; }
+        .swipe-hint { position:absolute; inset:0; display:flex; align-items:center; justify-content:flex-end; padding:0 16px; pointer-events:none; opacity:0; transition:opacity 0.15s; border-radius:inherit; }
+        .swipe-hint.left  { justify-content:flex-start; }
+        .swipe-hint span  { font-size:11px; font-weight:900; white-space:nowrap; }
+        .swipe-bg-done    { background:#dcfce7; color:#16a34a; }
+        .swipe-bg-pending { background:#fef9c3; color:#ca8a04; }
+
+        /* ── Admin Export Modal ──────────────────────────────── */
+        .stat-export-card { background:var(--bg-secondary,#f8fafc); border:1px solid var(--border,#e2e8f0); border-radius:14px; padding:14px 16px; text-align:center; }
 
         .calendar-header-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: #f8fafc; border-radius: 12px 12px 0 0; border: 1px solid #e2e8f0; border-bottom: none; }
         .calendar-day-label { padding: 8px 4px; text-align: center; font-weight: 700; font-size: 11px; color: #64748b; text-transform: uppercase; }
@@ -267,54 +406,81 @@
         .pres-icon-btn:hover { background:#6d28d9; transform:scale(1.1); }
 
         @media (max-width: 640px) {
-            /* Nav compact */
+            /* ── Navbar ─── */
             nav { padding-left: 12px !important; padding-right: 12px !important; }
-            #nav-user { max-width: 130px; }
-            #nav-user-name { max-width: 80px; font-size: 10px; }
+            #nav-user { max-width: 110px; }
+            #nav-user-name { max-width: 72px; font-size: 10px; }
+            /* Hide less critical nav buttons on mobile */
+            button[title="จัดการทีม (Admin)"],
+            button[title="แก้ไขวันหยุด (Admin)"] { display: none !important; }
 
-            /* Calendar day labels */
+            /* ── Modal — full bottom sheet on mobile ─── */
+            .modal-overlay { align-items: flex-end !important; padding: 0 !important; }
+            .modal-content { border-radius: 24px 24px 0 0 !important; max-height: 94vh !important; width: 100% !important; margin: 0 !important; }
+            .modal-content .p-6 { padding: 16px !important; }
+            .modal-content .p-5 { padding: 14px !important; }
+            .modal-content .space-y-5 > * + * { margin-top: 12px !important; }
+
+            /* ── Forms on mobile ─── */
+            .form-input { font-size: 16px !important; } /* prevent iOS zoom */
+            .grid.grid-cols-1.md\\:grid-cols-2 { grid-template-columns: 1fr !important; }
+            .grid.grid-cols-2 { grid-template-columns: 1fr 1fr; gap: 8px; }
+
+            /* Save/submit buttons — always visible, large tap target */
+            #btn-submit, #btn-report-submit {
+                position: sticky !important;
+                bottom: 0 !important;
+                z-index: 10 !important;
+                margin: 0 -16px -16px !important;
+                border-radius: 0 !important;
+                padding: 16px !important;
+                font-size: 16px !important;
+                box-shadow: 0 -4px 16px rgba(0,0,0,0.12) !important;
+            }
+
+            /* ── Calendar cells ─── */
             .calendar-day-label { font-size: 9px; padding: 6px 1px; }
-
-            /* Calendar cells — tighter for 7-col grid */
-            .calendar-cell { min-height: 60px; padding: 3px 2px; gap: 1px; }
-            .calendar-cell:not(.empty):hover::after { display: none; } /* hide + hint on mobile */
-
-            /* Date number */
-            .date-num { font-size: 10px; min-width: 18px; height: 18px; }
-            .today .date-num { width: 18px !important; height: 18px !important; font-size: 10px !important; }
-
-            /* Holiday chip — compact single line */
-            .holiday-chip { font-size: 7px; padding: 1px 3px; border-left-width: 2px; letter-spacing: -0.2px; }
-
-            /* Task chips */
+            .calendar-cell { min-height: 58px; padding: 3px 2px; gap: 1px; cursor: pointer; }
+            .calendar-cell:not(.empty):hover::after { display: none; }
+            .date-num { font-size: 10px; min-width: 16px; height: 16px; }
+            .today .date-num { width: 16px !important; height: 16px !important; font-size: 10px !important; }
+            .holiday-chip { font-size: 7px; padding: 1px 3px; border-left-width: 2px; }
             .task-chip { padding: 2px 3px; border-left-width: 2px; border-radius: 3px; }
             .task-chip .chip-leader { font-size: 7px; line-height: 1.2; }
             .task-chip .chip-title { display: none; }
-
-            /* Pres button always show on mobile */
             .pres-icon-btn { display: flex !important; width: 14px; height: 14px; top: 1px; right: 1px; }
             .pres-icon-btn svg { width: 7px; height: 7px; }
 
-            .lb-btn { width: 40px; height: 40px; font-size: 18px; }
+            /* ── Stat cards ─── */
+            .stat-cards-row,
+            .grid.grid-cols-2.sm\\:grid-cols-4,
+            .grid.grid-cols-4 { grid-template-columns: repeat(2, 1fr) !important; }
 
-            /* Stats row — 2x2 grid on narrow */
-            .stat-cards-row { grid-template-columns: repeat(2, 1fr) !important; }
+            /* ── Tabs ─── */
+            .bg-white.p-1.rounded-2xl button { font-size: 12px !important; padding: 8px 10px !important; }
 
-            /* Modal full-width on mobile */
-            .modal-content { border-radius: 20px 20px 0 0 !important; margin-top: auto !important; max-height: 92vh; }
-            .modal-overlay { align-items: flex-end !important; }
+            /* ── Task popup ─── */
+            .task-popup { left: 8px !important; right: 8px !important; width: auto !important; bottom: 80px !important; top: auto !important; transform: none !important; }
 
-            /* Form fields stack properly */
-            .grid.grid-cols-1.md\\:grid-cols-2 { grid-template-columns: 1fr !important; }
-            .grid.grid-cols-2 { grid-template-columns: 1fr 1fr; }
+            /* ── Search & filter bar ─── */
+            #adv-search-panel .grid { grid-template-columns: 1fr 1fr !important; }
 
-            /* Holiday editor */
+            /* ── Holiday editor ─── */
             .holiday-row input[type="date"] { width: 115px; font-size: 11px; }
             .holiday-row input[type="text"] { font-size: 11px; }
+
+            /* ── lb-btn ─── */
+            .lb-btn { width: 40px; height: 40px; font-size: 18px; }
         }
 
         /* File Viewer Modal */
         #fileModal .modal-content { max-width:800px; }
+
+        /* Admin 2-step confirm */
+        #admin-confirm-step { display:none; }
+        #admin-confirm-step.active { display:block; animation: fadeIn 0.25s ease; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+        #main-login-step.step-hidden { display:none; }
         .file-grid-item { position:relative; border-radius:10px; overflow:hidden; cursor:pointer; aspect-ratio:1/1; background:#f8fafc; border:1px solid #e2e8f0; }
         .file-grid-item img { width:100%; height:100%; object-fit:cover; transition:transform 0.2s; }
         .file-grid-item:hover img { transform:scale(1.05); }
@@ -379,6 +545,7 @@
     <!-- ═══ LOGIN SCREEN ════════════════════════════════════════════ -->
     <div id="login-screen">
         <div class="login-box">
+            <div id="main-login-step">
             <div class="text-center mb-4">
                 <div class="w-14 h-14 brand-primary rounded-2xl flex items-center justify-center text-white shadow-lg shadow-purple-300 mx-auto mb-3">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
@@ -403,6 +570,32 @@
                 <button class="login-key" style="background:#7c3aed;color:white;font-size:14px;" onclick="loginSubmit()">เข้าสู่ระบบ</button>
             </div>
             <div id="login-error"></div>
+            </div><!-- /main-login-step -->
+
+            <!-- Admin 2-step confirm PIN (hidden by default) -->
+            <div id="admin-confirm-step">
+                <div style="text-align:center;margin-bottom:12px;">
+                    <div style="font-size:28px;margin-bottom:6px;">🔐</div>
+                    <div style="font-size:14px;font-weight:900;color:#1e293b;">ยืนยันตัวตน Admin</div>
+                    <div style="font-size:12px;color:#94a3b8;font-weight:700;margin-top:3px;">กรอก PIN ยืนยัน (4 หลัก)</div>
+                </div>
+                <div id="admin-confirm-dots" class="login-pin-display"></div>
+                <div class="login-keypad">
+                    <button class="login-key" onclick="adminConfirmKey('1')">1</button>
+                    <button class="login-key" onclick="adminConfirmKey('2')">2</button>
+                    <button class="login-key" onclick="adminConfirmKey('3')">3</button>
+                    <button class="login-key" onclick="adminConfirmKey('4')">4</button>
+                    <button class="login-key" onclick="adminConfirmKey('5')">5</button>
+                    <button class="login-key" onclick="adminConfirmKey('6')">6</button>
+                    <button class="login-key" onclick="adminConfirmKey('7')">7</button>
+                    <button class="login-key" onclick="adminConfirmKey('8')">8</button>
+                    <button class="login-key" onclick="adminConfirmKey('9')">9</button>
+                    <button class="login-key del" onclick="adminConfirmDel()">⌫</button>
+                    <button class="login-key" onclick="adminConfirmKey('0')">0</button>
+                    <button class="login-key del" onclick="adminConfirmCancel()" style="font-size:11px;">ยกเลิก</button>
+                </div>
+                <div id="admin-confirm-error" style="color:#dc2626;font-size:12px;font-weight:700;text-align:center;margin-top:8px;min-height:18px;"></div>
+            </div>
             <p class="text-center text-[10px] text-slate-300 mt-5 font-bold">การไฟฟ้าส่วนภูมิภาค · Digital Transformation</p>
         </div>
     </div>
@@ -463,6 +656,7 @@
                 <button onclick="adminTab('quota')" id="atab-quota" class="px-5 py-3 whitespace-nowrap border-b-2 border-transparent text-slate-400">📊 Quota</button>
                 <button onclick="adminTab('users')" id="atab-users" class="px-5 py-3 whitespace-nowrap border-b-2 border-transparent text-slate-400">👤 Users</button>
                 <button onclick="adminTab('rules')" id="atab-rules" class="px-5 py-3 whitespace-nowrap border-b-2 border-transparent text-slate-400">🔐 Rules</button>
+                <button onclick="adminTab('export')" id="atab-export" class="px-5 py-3 whitespace-nowrap border-b-2 border-transparent text-slate-400">📤 Export</button>
                 <button onclick="adminTab('stats')" id="atab-stats" class="px-5 py-3 whitespace-nowrap border-b-2 border-transparent text-slate-400">📈 สถิติ</button>
             </div>
             <div id="apanel-log" class="p-4">
@@ -552,9 +746,32 @@ service cloud.firestore {
                 </div>
 
                 <a id="firebase-rules-link" href="https://console.firebase.google.com/project/pea-task-manager/firestore/rules" target="_blank"
-                   class="flex items-center justify-center gap-2 w-full py-2.5 bg-orange-50 text-orange-700 border border-orange-200 rounded-xl text-sm font-black hover:bg-orange-100 transition-all">
-                   🌐 เปิด Firebase Console → Rules
+                   class="flex items-center justify-center gap-2 w-full py-2.5 bg-orange-50 text-orange-700 border border-orange-200 rounded-xl text-sm font-black hover:bg-orange-100 transition-all mb-3">
+                   🌐 เปิด Firebase Console → Firestore Rules
                 </a>
+
+                <!-- Storage Rules section -->
+                <div class="p-3 bg-rose-50 border border-rose-200 rounded-2xl mb-3">
+                    <div class="font-black text-sm text-rose-800 mb-2">📁 Firebase Storage Rules (แก้แยก)</div>
+                    <p class="text-xs text-rose-600 mb-2">ไปที่ Firebase Console → Storage → Rules แล้วใส่:</p>
+                    <div class="relative">
+                        <pre id="storage-rules-block" class="bg-slate-900 text-green-400 rounded-xl p-3 text-[10px] font-mono overflow-x-auto whitespace-pre select-all">rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /tasks/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+  }
+}</pre>
+                        <button onclick="copyStorageRules()" class="absolute top-2 right-2 bg-rose-500 text-white text-[9px] font-black px-2 py-1 rounded-lg hover:bg-rose-600">📋 คัดลอก</button>
+                    </div>
+                    <a href="https://console.firebase.google.com/project/pea-task-manager/storage/rules" target="_blank"
+                       class="mt-2 flex items-center justify-center gap-1 text-xs font-black text-rose-600 hover:text-rose-800 underline">
+                       🌐 เปิด Firebase Console → Storage Rules
+                    </a>
+                </div>
 
                 <div class="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-2xl text-xs text-blue-700 font-bold space-y-1 leading-relaxed">
                     <div class="font-black text-sm mb-2">📖 อธิบาย Rules นี้</div>
@@ -565,6 +782,43 @@ service cloud.firestore {
                     <div>✅ <code>config/adminUIDs</code> — อ่านได้ทุก anonymous / เขียนได้เฉพาะ Admin UID</div>
                     <div>✅ <code>notes</code> — อ่าน/เขียนได้ทุก anonymous user</div>
                     <div class="pt-1 text-blue-500">ℹ️ Admin UID คือ Firebase anonymous UID ของ device ที่ login รหัส 489961</div>
+                </div>
+            </div>
+
+            <!-- Export Stats panel -->
+            <div id="apanel-export" class="p-4 hidden space-y-4">
+                <p class="text-xs text-slate-400 font-bold">Export สถิติและรายงานงานตามช่วงวันที่ที่กำหนด</p>
+                <!-- Date range -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="adv-filter-label">วันเริ่มต้น</label>
+                        <input type="date" id="exp-date-from" class="adv-filter-input" onchange="updateExportPreview()">
+                    </div>
+                    <div>
+                        <label class="adv-filter-label">วันสิ้นสุด</label>
+                        <input type="date" id="exp-date-to" class="adv-filter-input" onchange="updateExportPreview()">
+                    </div>
+                </div>
+                <!-- Quick range shortcuts -->
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="setExportRange('month')" class="text-xs px-3 py-1.5 bg-slate-100 rounded-lg font-bold hover:bg-purple-50 hover:text-purple-700 transition-all">เดือนนี้</button>
+                    <button onclick="setExportRange('lastmonth')" class="text-xs px-3 py-1.5 bg-slate-100 rounded-lg font-bold hover:bg-purple-50 hover:text-purple-700 transition-all">เดือนก่อน</button>
+                    <button onclick="setExportRange('quarter')" class="text-xs px-3 py-1.5 bg-slate-100 rounded-lg font-bold hover:bg-purple-50 hover:text-purple-700 transition-all">ไตรมาสนี้</button>
+                    <button onclick="setExportRange('year')" class="text-xs px-3 py-1.5 bg-slate-100 rounded-lg font-bold hover:bg-purple-50 hover:text-purple-700 transition-all">ปีนี้</button>
+                    <button onclick="setExportRange('all')" class="text-xs px-3 py-1.5 bg-slate-100 rounded-lg font-bold hover:bg-purple-50 hover:text-purple-700 transition-all">ทั้งหมด</button>
+                </div>
+                <!-- Preview stats -->
+                <div id="export-preview-stats" class="grid grid-cols-4 gap-2"></div>
+                <!-- Export buttons -->
+                <div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+                    <button onclick="exportStatsExcel()" class="flex items-center justify-center gap-2 py-3 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-sm font-black hover:bg-emerald-100 transition-all">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        Export Excel
+                    </button>
+                    <button onclick="exportStatsPDF()" class="flex items-center justify-center gap-2 py-3 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-sm font-black hover:bg-rose-100 transition-all">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        Export PDF
+                    </button>
                 </div>
             </div>
 
@@ -621,6 +875,9 @@ service cloud.firestore {
                     <span class="hidden sm:inline">มอบหมายงาน</span>
                     <span class="sm:hidden">เพิ่ม</span>
                 </button>
+                <!-- Dark mode toggle -->
+                <button id="dark-toggle" onclick="toggleDarkMode()" title="Dark / Light mode"
+                    class="p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all text-base">🌙</button>
                 <!-- Logout -->
                 <button onclick="doLogout()" title="ออกจากระบบ" class="p-2.5 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-all text-base">🚪</button>
             </div>
@@ -1632,8 +1889,13 @@ service cloud.firestore {
             const countEl = document.getElementById('filter-count');
             if (countEl) countEl.innerText = 'แสดง ' + sorted.length + ' รายการ';
 
-            document.getElementById('list-body').innerHTML = sorted.map(t => `
-                <tr class="hover:bg-slate-50 transition-colors">
+            const _shortName = n => (n||'').replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'').split(' ')[0];
+
+            document.getElementById('list-body').innerHTML = sorted.map(t => {
+                const creator = t.createdByName ? `<span class="creator-badge"><span class="dot"></span>สร้างโดย ${escapeHTML(_shortName(t.createdByName))}</span>` : '';
+                const updater = t.lastUpdatedByName ? `<span class="creator-badge"><span class="dot"></span>แก้ล่าสุด ${escapeHTML(_shortName(t.lastUpdatedByName))}</span>` : '';
+                return `
+                <tr class="hover:bg-slate-50 transition-colors" data-swipe-id="${t.id}" data-swipe-status="${t.status}">
                     <td class="px-6 py-4">
                         <div class="text-[10px] font-black text-purple-600 mb-0.5">${t.teamId}</div>
                         <div class="font-bold text-slate-800 text-sm">${getLeader(t.teamId)}</div>
@@ -1641,15 +1903,17 @@ service cloud.firestore {
                     <td class="px-6 py-4">
                         <div class="font-bold text-slate-700 text-sm">${escapeHTML(t.title)}</div>
                         ${t.remark ? `<div class="text-[11px] text-slate-400 mt-0.5 line-clamp-1">${escapeHTML(t.remark).replace(/https?:\/\/[^\s\u3000\u3001\u3002，。！？&<>"']+/g, u => { const safe = sanitizeURL(u); let lbl = u; try { lbl = new URL(u).hostname; } catch {} return safe !== '#' ? `<a href="${safe}" target="_blank" rel="noopener noreferrer" class="text-purple-500 underline">${escapeHTML(lbl)}</a>` : escapeHTML(u); })}</div>` : ''}
+                        <div class="flex gap-3 mt-1 flex-wrap">${creator}${updater}</div>
                     </td>
                     <td class="px-6 py-4">
                         <div class="text-[11px] text-slate-500 font-bold flex items-center gap-1">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg> ${t.date}
                         </div>
+                        ${t.dateEnd && t.dateEnd !== t.date ? `<div class="text-[10px] text-slate-400 font-bold mt-0.5">→ ${t.dateEnd}</div>` : ''}
                     </td>
                     <td class="px-6 py-4">
                         <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${t.status==='done'?'bg-emerald-100 text-emerald-700':t.status==='progress'?'bg-blue-100 text-blue-700':'bg-amber-100 text-amber-700'}">
-                            ${t.status==='done'?'สำเร็จ':t.status==='progress'?'กำลังทำ':'รอดำเนินการ'}
+                            ${t.status==='done'?'✅ สำเร็จ':t.status==='progress'?'🔄 กำลังทำ':'⏳ รอ'}
                         </span>
                     </td>
                     <td class="px-6 py-4">
@@ -1665,7 +1929,11 @@ service cloud.firestore {
                             </button>
                         </div>
                     </td>
-                </tr>`).join('') || `<tr><td colspan="5" class="py-16 text-center text-slate-400 italic">ไม่พบข้อมูลที่ค้นหา</td></tr>`;
+                </tr>`;
+            }).join('') || `<tr><td colspan="5" class="py-16 text-center text-slate-400 italic">ไม่พบข้อมูลที่ค้นหา</td></tr>`;
+
+            // Attach swipe handlers after render
+            _attachSwipeHandlers();
         };
 
         window.openEditTaskModal = (id) => {
@@ -2255,6 +2523,16 @@ service cloud.firestore {
             popupTaskId = id;
             document.getElementById('popup-leader').innerText = task.teamId + ' · ' + getLeader(task.teamId);
             document.getElementById('popup-title').innerText = task.title;
+            // Creator / updater meta
+            const metaEl = document.getElementById('popup-creator-meta');
+            if (metaEl) {
+                const sn = n => (n||'').replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'');
+                const parts = [];
+                if (task.createdByName) parts.push(`👤 สร้างโดย ${sn(task.createdByName)}`);
+                if (task.lastUpdatedByName) parts.push(`✏️ แก้ล่าสุด ${sn(task.lastUpdatedByName)}`);
+                metaEl.textContent = parts.join('  ·  ');
+                metaEl.classList.toggle('hidden', parts.length === 0);
+            }
             // Show remark with clickable links
             const remarkEl = document.getElementById('popup-remark');
             if (remarkEl) {
@@ -3139,8 +3417,8 @@ service cloud.firestore {
             _loginBuffer += k;
             renderLoginDots(); renderLoginPreview();
             document.getElementById('login-error').textContent = '';
-            // Auto-submit if exact match found
-            if (USERS[_loginBuffer]) setTimeout(loginSubmit, 250);
+            // Auto-submit only for non-admin users (admin needs 2-step)
+            if (USERS[_loginBuffer] && _loginBuffer !== ADMIN_CODE) setTimeout(loginSubmit, 250);
         };
         window.loginDel = () => {
             _loginBuffer = _loginBuffer.slice(0, -1);
@@ -3150,33 +3428,88 @@ service cloud.firestore {
         window.loginSubmit = () => {
             const name = USERS[_loginBuffer];
             if (name) {
-                const firebaseUID = auth?.currentUser?.uid || null;
-                currentUser = { code: _loginBuffer, name, uid: firebaseUID };
-                const shortName = name.replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'');
                 const isAdminUser = _loginBuffer === ADMIN_CODE;
-                document.getElementById('nav-user-name').innerHTML =
-                    shortName + (isAdminUser
-                        ? ' <span style="background:#7c3aed;color:white;font-size:9px;padding:1px 5px;border-radius:6px;font-weight:900;vertical-align:middle;">ADMIN</span>'
-                        : '');
-                document.getElementById('nav-user').classList.remove('hidden');
-                const adminBtn = document.getElementById('admin-panel-btn');
-                if (adminBtn) adminBtn.classList.toggle('hidden', !isAdminUser);
-                document.getElementById('login-screen').classList.add('hidden');
-                localStorage.setItem('pea_session', JSON.stringify(currentUser));
-                _loginBuffer = '';
-                renderLoginDots();
-                // Admin → register UID ลง Firestore เพื่อใช้กับ Security Rules
-                if (isAdminUser && firebaseUID) _registerAdminUID(firebaseUID);
-                setTimeout(() => {
-                    testLogPermission();
-                    writeLog('login', {});
-                    syncMyQuota(); // sync quota จาก Firestore
-                }, 800);
+                if (isAdminUser) {
+                    // Admin → show 2-step confirm PIN
+                    _pendingAdminCode = _loginBuffer;
+                    _adminConfirmBuffer = '';
+                    document.getElementById('main-login-step').classList.add('step-hidden');
+                    document.getElementById('admin-confirm-step').classList.add('active');
+                    _renderAdminConfirmDots();
+                    document.getElementById('admin-confirm-error').textContent = '';
+                    return;
+                }
+                _completeLogin(_loginBuffer, name, false);
             } else {
                 document.getElementById('login-error').textContent = '❌ ไม่พบรหัสพนักงาน กรุณาตรวจสอบอีกครั้ง';
                 _loginBuffer = '';
                 renderLoginDots(); renderLoginPreview();
             }
+        };
+
+        // ── Admin 2-step confirm PIN ───────────────────────────
+        const ADMIN_CONFIRM_PIN = '8333';
+        let _pendingAdminCode = '';
+        let _adminConfirmBuffer = '';
+
+        const _renderAdminConfirmDots = () => {
+            const el = document.getElementById('admin-confirm-dots');
+            if (!el) return;
+            el.innerHTML = Array.from({length: 4}, (_, i) =>
+                `<div class="login-pin-dot${i < _adminConfirmBuffer.length ? ' filled' : ''}"></div>`
+            ).join('');
+        };
+
+        window.adminConfirmKey = (k) => {
+            if (_adminConfirmBuffer.length >= 4) return;
+            _adminConfirmBuffer += k;
+            _renderAdminConfirmDots();
+            document.getElementById('admin-confirm-error').textContent = '';
+            if (_adminConfirmBuffer.length === 4) {
+                setTimeout(() => {
+                    if (_adminConfirmBuffer === ADMIN_CONFIRM_PIN) {
+                        _completeLogin(_pendingAdminCode, USERS[_pendingAdminCode], true);
+                        adminConfirmCancel();
+                    } else {
+                        document.getElementById('admin-confirm-error').textContent = '❌ PIN ยืนยันไม่ถูกต้อง';
+                        _adminConfirmBuffer = '';
+                        _renderAdminConfirmDots();
+                    }
+                }, 200);
+            }
+        };
+        window.adminConfirmDel = () => {
+            _adminConfirmBuffer = _adminConfirmBuffer.slice(0, -1);
+            _renderAdminConfirmDots();
+            document.getElementById('admin-confirm-error').textContent = '';
+        };
+        window.adminConfirmCancel = () => {
+            _pendingAdminCode = '';
+            _adminConfirmBuffer = '';
+            document.getElementById('admin-confirm-step').classList.remove('active');
+            document.getElementById('main-login-step').classList.remove('step-hidden');
+            _loginBuffer = '';
+            renderLoginDots(); renderLoginPreview();
+            document.getElementById('login-error').textContent = '';
+        };
+
+        const _completeLogin = (code, name, isAdminUser) => {
+            const firebaseUID = auth?.currentUser?.uid || null;
+            currentUser = { code, name, uid: firebaseUID };
+            const shortName = name.replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'');
+            document.getElementById('nav-user-name').innerHTML =
+                shortName + (isAdminUser
+                    ? ' <span style="background:#7c3aed;color:white;font-size:9px;padding:1px 5px;border-radius:6px;font-weight:900;vertical-align:middle;">ADMIN</span>'
+                    : '');
+            document.getElementById('nav-user').classList.remove('hidden');
+            const adminBtn = document.getElementById('admin-panel-btn');
+            if (adminBtn) adminBtn.classList.toggle('hidden', !isAdminUser);
+            document.getElementById('login-screen').classList.add('hidden');
+            localStorage.setItem('pea_session', JSON.stringify(currentUser));
+            _loginBuffer = '';
+            renderLoginDots();
+            if (isAdminUser && firebaseUID) _registerAdminUID(firebaseUID);
+            setTimeout(() => { testLogPermission(); writeLog('login', {}); syncMyQuota(); }, 800);
         };
         window.doLogout = () => {
             if (!confirm('ออกจากระบบ?')) return;
@@ -3353,18 +3686,19 @@ service cloud.firestore {
         };
 
         window.adminTab = (tab) => {
-            ['log','quota','users','rules','stats'].forEach(t => {
+            ['log','quota','users','rules','export','stats'].forEach(t => {
                 document.getElementById(`apanel-${t}`).classList.toggle('hidden', t !== tab);
                 const btn = document.getElementById(`atab-${t}`);
                 if (!btn) return;
                 if (t === tab) { btn.style.borderBottomColor = '#7c3aed'; btn.style.color = '#7c3aed'; }
-                else { btn.style.borderBottomColor = 'transparent'; btn.style.color = '#94a3b8'; }
+                else           { btn.style.borderBottomColor = 'transparent'; btn.style.color = '#94a3b8'; }
             });
-            if (tab === 'log')   loadAdminLogs();
-            if (tab === 'quota') loadAdminQuota();
-            if (tab === 'users') loadUsersPanel();
-            if (tab === 'rules') loadRulesPanel();
-            if (tab === 'stats') loadAdminStats();
+            if (tab === 'log')    loadAdminLogs();
+            if (tab === 'quota')  loadAdminQuota();
+            if (tab === 'users')  loadUsersPanel();
+            if (tab === 'rules')  loadRulesPanel();
+            if (tab === 'export') { setExportRange('month'); }
+            if (tab === 'stats')  loadAdminStats();
         };
 
         window.copyRules = () => {
@@ -3729,9 +4063,19 @@ service cloud.firestore {
 
         window.copyFSRules = () => {
             navigator.clipboard.writeText(FIRESTORE_RULES).then(() => {
-                showRealtimeToast('คัดลอก Rules แล้ว — ไปวางใน Firebase Console', '📋');
+                showRealtimeToast('คัดลอก Firestore Rules แล้ว', '📋');
             }).catch(() => {
                 const el = document.getElementById('fs-rules-block');
+                if (el) { const r = document.createRange(); r.selectNode(el); window.getSelection().removeAllRanges(); window.getSelection().addRange(r); }
+            });
+        };
+
+        window.copyStorageRules = () => {
+            const text = document.getElementById('storage-rules-block')?.textContent || '';
+            navigator.clipboard.writeText(text).then(() => {
+                showRealtimeToast('คัดลอก Storage Rules แล้ว', '📋');
+            }).catch(() => {
+                const el = document.getElementById('storage-rules-block');
                 if (el) { const r = document.createRange(); r.selectNode(el); window.getSelection().removeAllRanges(); window.getSelection().addRange(r); }
             });
         };
@@ -3983,7 +4327,257 @@ service cloud.firestore {
             }
         });
 
+        // ══════════════════════════════════════════════════════════
+        // PRIORITY 7: DARK MODE
+        // ══════════════════════════════════════════════════════════
+        const _applyTheme = (dark) => {
+            document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+            const btn = document.getElementById('dark-toggle');
+            if (btn) btn.textContent = dark ? '☀️' : '🌙';
+            localStorage.setItem('pea_theme', dark ? 'dark' : 'light');
+        };
+
+        window.toggleDarkMode = () => {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            _applyTheme(!isDark);
+        };
+
+        const _initTheme = () => {
+            const saved = localStorage.getItem('pea_theme');
+            if (saved) { _applyTheme(saved === 'dark'); return; }
+            // Follow system preference
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            _applyTheme(prefersDark);
+            // Listen for system changes
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+                if (!localStorage.getItem('pea_theme')) _applyTheme(e.matches);
+            });
+        };
+
+        // ══════════════════════════════════════════════════════════
+        // PRIORITY 8: SWIPE TO UPDATE STATUS (mobile list view)
+        // ══════════════════════════════════════════════════════════
+        const SWIPE_STATUS_CYCLE = { pending:'progress', progress:'done', done:'pending' };
+        const SWIPE_STATUS_TH    = { pending:'⏳ รอ', progress:'🔄 กำลังทำ', done:'✅ สำเร็จ' };
+        const SWIPE_THRESHOLD = 80; // px
+
+        const _attachSwipeHandlers = () => {
+            document.querySelectorAll('tr[data-swipe-id]').forEach(row => {
+                if (row._swipeInit) return;
+                row._swipeInit = true;
+                let startX = 0, startY = 0, dx = 0;
+                const _reset = () => { row.style.transform = ''; row.style.transition = ''; row.style.background = ''; };
+
+                row.addEventListener('touchstart', e => {
+                    startX = e.touches[0].clientX;
+                    startY = e.touches[0].clientY;
+                    dx = 0;
+                    row.style.transition = 'none';
+                }, { passive: true });
+
+                row.addEventListener('touchmove', e => {
+                    dx = e.touches[0].clientX - startX;
+                    const dy = Math.abs(e.touches[0].clientY - startY);
+                    if (dy > Math.abs(dx)) { _reset(); return; } // vertical scroll
+                    row.style.transform = `translateX(${dx}px)`;
+                    const frac = Math.min(Math.abs(dx) / SWIPE_THRESHOLD, 1);
+                    if (dx > 20) { // swipe right → next status
+                        row.style.background = `rgba(16,185,129,${frac * 0.2})`;
+                    } else if (dx < -20) { // swipe left → prev status
+                        row.style.background = `rgba(245,158,11,${frac * 0.2})`;
+                    }
+                }, { passive: true });
+
+                row.addEventListener('touchend', async () => {
+                    row.style.transition = 'transform 0.25s ease, background 0.25s';
+                    if (Math.abs(dx) >= SWIPE_THRESHOLD) {
+                        const taskId = row.dataset.swipeId;
+                        const curStatus = row.dataset.swipeStatus;
+                        const statusOrder = ['pending','progress','done'];
+                        const curIdx = statusOrder.indexOf(curStatus);
+                        const newStatus = dx > 0
+                            ? statusOrder[Math.min(curIdx + 1, 2)]
+                            : statusOrder[Math.max(curIdx - 1, 0)];
+                        if (newStatus !== curStatus) {
+                            row.style.transform = `translateX(${dx > 0 ? 100 : -100}%)`;
+                            await updateDoc(doc(db, 'tasks', taskId), {
+                                status: newStatus,
+                                lastUpdatedBy: currentUser?.code || '',
+                                lastUpdatedByName: currentUser?.name || '',
+                            });
+                            writeLog('update_status', { taskId, newStatus });
+                            showRealtimeToast(`อัปเดต: ${SWIPE_STATUS_TH[newStatus]}`, '👆');
+                        }
+                    }
+                    _reset();
+                }, { passive: true });
+            });
+        };
+
+        // ══════════════════════════════════════════════════════════
+        // PRIORITY 10: EXPORT STATS (Admin Panel)
+        // ══════════════════════════════════════════════════════════
+        const _getExportTasks = () => {
+            const from = document.getElementById('exp-date-from')?.value || '';
+            const to   = document.getElementById('exp-date-to')?.value   || '';
+            return tasks.filter(t => (!from || t.date >= from) && (!to || t.date <= to));
+        };
+
+        window.setExportRange = (range) => {
+            const now = new Date();
+            const pad = n => String(n).padStart(2,'0');
+            const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+            let from, to;
+            if (range === 'month') {
+                from = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
+                to   = fmt(new Date(now.getFullYear(), now.getMonth()+1, 0));
+            } else if (range === 'lastmonth') {
+                from = fmt(new Date(now.getFullYear(), now.getMonth()-1, 1));
+                to   = fmt(new Date(now.getFullYear(), now.getMonth(), 0));
+            } else if (range === 'quarter') {
+                const q = Math.floor(now.getMonth()/3);
+                from = fmt(new Date(now.getFullYear(), q*3, 1));
+                to   = fmt(new Date(now.getFullYear(), q*3+3, 0));
+            } else if (range === 'year') {
+                from = `${now.getFullYear()}-01-01`;
+                to   = `${now.getFullYear()}-12-31`;
+            } else { from = ''; to = ''; }
+            const f = document.getElementById('exp-date-from');
+            const t = document.getElementById('exp-date-to');
+            if (f) f.value = from;
+            if (t) t.value = to;
+            updateExportPreview();
+        };
+
+        window.updateExportPreview = () => {
+            const data = _getExportTasks();
+            const done = data.filter(t => t.status==='done').length;
+            const prog = data.filter(t => t.status==='progress').length;
+            const pend = data.filter(t => t.status==='pending').length;
+            const pct  = data.length ? Math.round(done/data.length*100) : 0;
+            const el = document.getElementById('export-preview-stats');
+            if (!el) return;
+            el.innerHTML = [
+                ['ทั้งหมด', data.length, '#7c3aed'],
+                [`✅ สำเร็จ ${pct}%`, done, '#16a34a'],
+                ['🔄 กำลังทำ', prog, '#2563eb'],
+                ['⏳ รอ', pend, '#d97706'],
+            ].map(([label, val, color]) => `
+                <div class="stat-export-card">
+                    <div style="font-size:22px;font-weight:900;color:${color}">${val}</div>
+                    <div style="font-size:10px;color:#94a3b8;font-weight:700;margin-top:2px">${label}</div>
+                </div>`).join('');
+        };
+
+        window.exportStatsExcel = async () => {
+            await window._loadXLSX();
+            const data = _getExportTasks();
+            if (!data.length) { alert('ไม่มีข้อมูลในช่วงที่เลือก'); return; }
+            const from = document.getElementById('exp-date-from')?.value || 'ทั้งหมด';
+            const to   = document.getElementById('exp-date-to')?.value   || 'ทั้งหมด';
+            const done = data.filter(t=>t.status==='done').length;
+            const prog = data.filter(t=>t.status==='progress').length;
+            const pend = data.filter(t=>t.status==='pending').length;
+            const pct  = Math.round(done/data.length*100);
+            const _sn  = n => (n||'-').replace(/^(นาย|นาง|นางสาว|ว่าที่ร้อยตรี)/,'');
+
+            // Sheet 1: รายละเอียดงาน
+            const wsData = [
+                ['PEA Task Manager — สรุปสถิติงาน', '', '', '', '', '', '', ''],
+                [`ช่วงวันที่: ${from} ถึง ${to}`, '', '', '', '', '', '', ''],
+                [''],
+                ['ลำดับ','รหัสทีม','หัวหน้าทีม','รายละเอียดงาน','หมายเหตุ','วันที่','วันสิ้นสุด','สถานะ','บันทึกผล','สร้างโดย','แก้ล่าสุดโดย'],
+                ...data.map((t,i) => [
+                    i+1, t.teamId, getLeader(t.teamId), t.title, t.remark||'-',
+                    t.date, t.dateEnd||'-', TH_STATUS[t.status]||t.status,
+                    t.reportNote||'-', _sn(t.createdByName), _sn(t.lastUpdatedByName)
+                ]),
+                [''],['── สรุปผล ──'],
+                ['งานทั้งหมด', data.length, '', 'สำเร็จ', done, `${pct}%`],
+                ['รอดำเนินการ', pend, '', 'กำลังทำ', prog],
+            ];
+
+            // Sheet 2: สถิติรายทีม
+            const byTeam = {};
+            data.forEach(t => { if (!byTeam[t.teamId]) byTeam[t.teamId] = {done:0,prog:0,pend:0}; byTeam[t.teamId][t.status==='done'?'done':t.status==='progress'?'prog':'pend']++; });
+            const wsTeam = [
+                ['สถิติรายทีม', '', '', ''],
+                ['ทีม','สำเร็จ','กำลังทำ','รอ','รวม'],
+                ...Object.entries(byTeam).map(([id, s]) => [getLeader(id), s.done, s.prog, s.pend, s.done+s.prog+s.pend]),
+            ];
+
+            const wb = XLSX.utils.book_new();
+            const ws1 = XLSX.utils.aoa_to_sheet(wsData);
+            ws1['!cols'] = [{wch:6},{wch:8},{wch:16},{wch:38},{wch:28},{wch:12},{wch:12},{wch:20},{wch:28},{wch:14},{wch:14}];
+            ws1['!merges'] = [{s:{r:0,c:0},e:{r:0,c:10}},{s:{r:1,c:0},e:{r:1,c:10}}];
+            const ws2 = XLSX.utils.aoa_to_sheet(wsTeam);
+            ws2['!cols'] = [{wch:24},{wch:10},{wch:10},{wch:10},{wch:10}];
+            XLSX.utils.book_append_sheet(wb, ws1, 'รายละเอียด');
+            XLSX.utils.book_append_sheet(wb, ws2, 'สถิติรายทีม');
+            XLSX.writeFile(wb, `PEA_Stats_${from}_${to}.xlsx`);
+            showRealtimeToast('Export Excel สำเร็จ', '📊');
+        };
+
+        window.exportStatsPDF = () => {
+            const data = _getExportTasks();
+            if (!data.length) { alert('ไม่มีข้อมูลในช่วงที่เลือก'); return; }
+            const from = document.getElementById('exp-date-from')?.value || 'ทั้งหมด';
+            const to   = document.getElementById('exp-date-to')?.value   || 'ทั้งหมด';
+            const done = data.filter(t=>t.status==='done').length;
+            const prog = data.filter(t=>t.status==='progress').length;
+            const pend = data.filter(t=>t.status==='pending').length;
+            const pct  = Math.round(done/data.length*100);
+
+            const byTeam = {};
+            data.forEach(t => { if (!byTeam[t.teamId]) byTeam[t.teamId] = {done:0,prog:0,pend:0}; byTeam[t.teamId][t.status==='done'?'done':t.status==='progress'?'prog':'pend']++; });
+            const teamRows = Object.entries(byTeam).map(([id,s]) =>
+                `<tr><td>${getLeader(id)}</td><td style="color:#16a34a;font-weight:700;text-align:center">${s.done}</td><td style="color:#2563eb;font-weight:700;text-align:center">${s.prog}</td><td style="color:#d97706;font-weight:700;text-align:center">${s.pend}</td><td style="font-weight:900;text-align:center">${s.done+s.prog+s.pend}</td></tr>`
+            ).join('');
+            const taskRows = data.map((t,i) => `
+                <tr style="background:${i%2===0?'#fff':'#f8fafc'}">
+                    <td style="text-align:center">${i+1}</td>
+                    <td><b style="color:#7c3aed">${t.teamId}</b><br><small>${getLeader(t.teamId)}</small></td>
+                    <td>${escapeHTML(t.title)}</td>
+                    <td style="text-align:center">${t.date}</td>
+                    <td style="text-align:center"><span style="background:${STATUS_COLOR[t.status]}22;color:${STATUS_COLOR[t.status]};padding:2px 8px;border-radius:20px;font-size:10px;font-weight:800">${TH_STATUS[t.status]}</span></td>
+                    <td style="font-size:10px;color:#64748b">${t.reportNote||'-'}</td>
+                </tr>`).join('');
+
+            const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
+            <style>*{box-sizing:border-box}body{font-family:'Sarabun',sans-serif;margin:0;padding:0;color:#1e293b}
+            @media print{@page{margin:12mm;size:A4 landscape}.no-print{display:none!important}}
+            table{width:100%;border-collapse:collapse}th{background:#7c3aed;color:white;padding:8px 10px;font-size:11px;text-align:left}
+            td{padding:6px 10px;font-size:11px;border-bottom:1px solid #e2e8f0}h3{color:#7c3aed;margin:16px 0 8px}
+            .stat-box{display:inline-block;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 20px;text-align:center;margin:4px}
+            .stat-num{font-size:28px;font-weight:900}.stat-lbl{font-size:11px;color:#64748b;margin-top:2px}
+            </style></head><body>
+            <div class="no-print" style="padding:10px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:13px;color:#64748b">ตรวจสอบแล้วกดพิมพ์</span>
+                <button onclick="window.print()" style="background:#7c3aed;color:white;border:none;padding:8px 20px;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px;font-family:'Sarabun',sans-serif">🖨️ พิมพ์ / PDF</button>
+            </div>
+            <div style="background:linear-gradient(135deg,#7c3aed,#4f46e5);padding:20px 28px;color:white">
+                <div style="font-size:20px;font-weight:900">⚡ PEA Task Manager — สรุปสถิติงาน</div>
+                <div style="font-size:13px;opacity:0.8;margin-top:4px">ช่วงวันที่: ${from} ถึง ${to} · พิมพ์: ${new Date().toLocaleDateString('th-TH')}</div>
+            </div>
+            <div style="padding:16px 24px">
+                <div style="margin-bottom:16px">
+                    <div class="stat-box"><div class="stat-num" style="color:#7c3aed">${data.length}</div><div class="stat-lbl">ทั้งหมด</div></div>
+                    <div class="stat-box"><div class="stat-num" style="color:#16a34a">${done}</div><div class="stat-lbl">✅ สำเร็จ ${pct}%</div></div>
+                    <div class="stat-box"><div class="stat-num" style="color:#2563eb">${prog}</div><div class="stat-lbl">🔄 กำลังทำ</div></div>
+                    <div class="stat-box"><div class="stat-num" style="color:#d97706">${pend}</div><div class="stat-lbl">⏳ รอ</div></div>
+                </div>
+                <h3>📊 สถิติรายทีม</h3>
+                <table><thead><tr><th>ทีม</th><th style="text-align:center">สำเร็จ</th><th style="text-align:center">กำลังทำ</th><th style="text-align:center">รอ</th><th style="text-align:center">รวม</th></tr></thead><tbody>${teamRows}</tbody></table>
+                <h3>📋 รายละเอียดงาน</h3>
+                <table><thead><tr><th>#</th><th>ทีม</th><th>ภารกิจ</th><th>วันที่</th><th>สถานะ</th><th>บันทึก</th></tr></thead><tbody>${taskRows}</tbody></table>
+            </div></body></html>`;
+            const w = window.open('','_blank','width=1100,height=800');
+            w.document.write(html); w.document.close();
+            setTimeout(() => w.print(), 600);
+        };
+
         init();
+        _initTheme();
         restoreSession();
         _initOfflineMonitor();
         setTimeout(updateNotifBadge, 1500);
@@ -4087,6 +4681,7 @@ service cloud.firestore {
         <div class="task-popup-header">
             <div class="task-popup-leader" id="popup-leader"></div>
             <div class="task-popup-title" id="popup-title"></div>
+            <div id="popup-creator-meta" class="hidden" style="font-size:10px;color:#94a3b8;font-weight:700;margin-top:4px;line-height:1.4;"></div>
             <div class="hidden" id="popup-remark-wrap" style="margin-top:4px;padding:6px 8px;background:#f5f3ff;border-radius:8px;border-left:3px solid #7c3aed;">
                 <div style="font-size:9px;font-weight:900;color:#7c3aed;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">หมายเหตุ</div>
                 <div id="popup-remark" style="font-size:11px;color:#374151;line-height:1.5;word-break:break-word;"></div>
