@@ -406,71 +406,100 @@
         .pres-icon-btn:hover { background:#6d28d9; transform:scale(1.1); }
 
         @media (max-width: 640px) {
-            /* ── Navbar ─── */
-            nav { padding-left: 12px !important; padding-right: 12px !important; }
-            #nav-user { max-width: 110px; }
-            #nav-user-name { max-width: 72px; font-size: 10px; }
-            /* Hide less critical nav buttons on mobile */
-            button[title="จัดการทีม (Admin)"],
-            button[title="แก้ไขวันหยุด (Admin)"] { display: none !important; }
+            /* ── Base ── */
+            body { -webkit-tap-highlight-color: transparent; }
+            main { padding: 12px 10px 90px !important; }
+            nav { padding: 8px 12px !important; height: auto !important; min-height: 56px; }
 
-            /* ── Modal — full bottom sheet on mobile ─── */
+            /* ── Navbar ── */
+            #nav-user { max-width: 42px; }
+            #nav-user-name { display: none !important; }
+            nav h1 { font-size: 13px !important; }
+            nav p.text-\[10px\] { display: none !important; }
+
+            /* ── Stats 2×2 ── */
+            .grid.grid-cols-2.sm\\:grid-cols-4 { grid-template-columns: repeat(2,1fr) !important; gap: 8px !important; }
+            .stat-card { padding: 12px !important; }
+            .stat-card .text-3xl { font-size: 1.6rem !important; }
+            .stat-card p { font-size: 8px !important; }
+
+            /* ── Tabs ── */
+            .bg-white.p-1.rounded-2xl { padding: 3px !important; overflow-x: auto; }
+            .bg-white.p-1.rounded-2xl button { font-size: 11px !important; padding: 7px 9px !important; white-space: nowrap; }
+
+            /* ── Modal bottom sheet ── */
             .modal-overlay { align-items: flex-end !important; padding: 0 !important; }
-            .modal-content { border-radius: 24px 24px 0 0 !important; max-height: 94vh !important; width: 100% !important; margin: 0 !important; }
-            .modal-content .p-6 { padding: 16px !important; }
-            .modal-content .p-5 { padding: 14px !important; }
+            .modal-content {
+                border-radius: 24px 24px 0 0 !important;
+                max-height: 95dvh !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+            }
+            .modal-content::before { content:''; display:block; width:36px; height:4px; background:#e2e8f0; border-radius:2px; margin:10px auto 2px; }
+            .modal-content > div.p-6 { padding: 14px 16px !important; }
+            .modal-content > div.p-5 { padding: 12px 14px !important; }
             .modal-content .space-y-5 > * + * { margin-top: 12px !important; }
 
-            /* ── Forms on mobile ─── */
-            .form-input { font-size: 16px !important; } /* prevent iOS zoom */
+            /* ── Forms ── */
+            .form-input, select.form-input { font-size: 16px !important; min-height: 44px; }
+            input[type="date"].form-input { font-size: 13px !important; min-height: 44px; padding: 8px 8px !important; }
+            .grid.grid-cols-2.gap-2 { gap: 6px !important; }
             .grid.grid-cols-1.md\\:grid-cols-2 { grid-template-columns: 1fr !important; }
-            .grid.grid-cols-2 { grid-template-columns: 1fr 1fr; gap: 8px; }
 
-            /* Save/submit buttons — always visible, large tap target */
+            /* ── Save buttons — sticky bottom with safe area ── */
             #btn-submit, #btn-report-submit {
                 position: sticky !important;
                 bottom: 0 !important;
-                z-index: 10 !important;
-                margin: 0 -16px -16px !important;
+                z-index: 20 !important;
+                margin: 8px -16px 0 !important;
+                width: calc(100% + 32px) !important;
                 border-radius: 0 !important;
                 padding: 16px !important;
-                font-size: 16px !important;
-                box-shadow: 0 -4px 16px rgba(0,0,0,0.12) !important;
+                padding-bottom: max(16px, env(safe-area-inset-bottom, 16px)) !important;
+                font-size: 15px !important;
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.14) !important;
             }
 
-            /* ── Calendar cells ─── */
-            .calendar-day-label { font-size: 9px; padding: 6px 1px; }
-            .calendar-cell { min-height: 58px; padding: 3px 2px; gap: 1px; cursor: pointer; }
-            .calendar-cell:not(.empty):hover::after { display: none; }
-            .date-num { font-size: 10px; min-width: 16px; height: 16px; }
-            .today .date-num { width: 16px !important; height: 16px !important; font-size: 10px !important; }
-            .holiday-chip { font-size: 7px; padding: 1px 3px; border-left-width: 2px; }
-            .task-chip { padding: 2px 3px; border-left-width: 2px; border-radius: 3px; }
-            .task-chip .chip-leader { font-size: 7px; line-height: 1.2; }
-            .task-chip .chip-title { display: none; }
-            .pres-icon-btn { display: flex !important; width: 14px; height: 14px; top: 1px; right: 1px; }
-            .pres-icon-btn svg { width: 7px; height: 7px; }
+            /* ── Calendar ── */
+            .calendar-day-label { font-size: 8px !important; padding: 5px 1px !important; }
+            .calendar-cell { min-height: 54px !important; padding: 2px 2px !important; gap: 1px !important; }
+            .calendar-cell:not(.empty):hover::after { display: none !important; }
+            .date-num { font-size: 9px !important; min-width: 15px !important; height: 15px !important; line-height: 15px !important; }
+            .today .date-num { width: 15px !important; height: 15px !important; font-size: 9px !important; }
+            .task-chip { padding: 2px 3px !important; border-left-width: 2px !important; border-radius: 3px !important; }
+            .chip-leader { font-size: 7px !important; line-height: 1.2 !important; }
+            .task-chip .chip-title { display: none !important; }
+            .holiday-chip { font-size: 7px !important; padding: 1px 2px !important; }
+            .pres-icon-btn { display: flex !important; width: 13px !important; height: 13px !important; top: 1px !important; right: 1px !important; }
+            .pres-icon-btn svg { width: 6px !important; height: 6px !important; }
 
-            /* ── Stat cards ─── */
-            .stat-cards-row,
-            .grid.grid-cols-2.sm\\:grid-cols-4,
-            .grid.grid-cols-4 { grid-template-columns: repeat(2, 1fr) !important; }
+            /* ── Advanced filter panel ── */
+            #adv-search-panel .grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
 
-            /* ── Tabs ─── */
-            .bg-white.p-1.rounded-2xl button { font-size: 12px !important; padding: 8px 10px !important; }
+            /* ── Holiday editor ── */
+            .holiday-row { flex-wrap: wrap; }
+            .holiday-row input[type="date"] { width: 120px; font-size: 12px; }
+            .holiday-row input[type="text"] { font-size: 12px; }
 
-            /* ── Task popup ─── */
-            .task-popup { left: 8px !important; right: 8px !important; width: auto !important; bottom: 80px !important; top: auto !important; transform: none !important; }
+            /* ── lb-btn ── */
+            .lb-btn { width: 38px; height: 38px; font-size: 16px; }
 
-            /* ── Search & filter bar ─── */
-            #adv-search-panel .grid { grid-template-columns: 1fr 1fr !important; }
+            /* ── Offline banner ── */
+            #offline-banner-inner { margin: 6px; border-radius: 14px; font-size: 12px; padding-bottom: max(12px, env(safe-area-inset-bottom, 12px)); }
+        }
 
-            /* ── Holiday editor ─── */
-            .holiday-row input[type="date"] { width: 115px; font-size: 11px; }
-            .holiday-row input[type="text"] { font-size: 11px; }
+        /* ── iPhone SE / very small (≤390px) ── */
+        @media (max-width: 390px) {
+            .chip-leader { font-size: 6px !important; }
+            .calendar-cell { min-height: 48px !important; }
+            .date-num { font-size: 8px !important; }
+            .bg-white.p-1.rounded-2xl button { font-size: 10px !important; padding: 6px 7px !important; }
+        }
 
-            /* ── lb-btn ─── */
-            .lb-btn { width: 40px; height: 40px; font-size: 18px; }
+        /* ── iOS safe area for nav (Dynamic Island) ── */
+        @supports (padding-top: env(safe-area-inset-top)) {
+            nav { padding-top: max(8px, env(safe-area-inset-top)) !important; }
         }
 
         /* File Viewer Modal */
@@ -847,46 +876,57 @@ service firebase.storage {
 
     <nav class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 brand-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-purple-200">
-                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+            <!-- Logo (hide subtitle on mobile) -->
+            <div class="flex items-center gap-2.5 flex-shrink-0">
+                <div class="w-9 h-9 brand-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-purple-200">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
                 </div>
-                <div>
-                    <h1 class="font-black text-slate-900 leading-none text-lg">PEA Task Manager</h1>
-                    <p class="text-[10px] text-purple-600 uppercase tracking-widest font-extrabold">Digital Transformation</p>
+                <div class="hidden xs:block">
+                    <h1 class="font-black text-slate-900 leading-none text-base">PEA Task Manager</h1>
+                    <p class="text-[9px] text-purple-600 uppercase tracking-widest font-extrabold hidden sm:block">Digital Transformation</p>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
-                <!-- User greeting -->
-                <div id="nav-user" class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-purple-50 border border-purple-100 rounded-xl">
-                    <span class="text-base">👤</span>
-                    <span id="nav-user-name" class="text-xs font-black text-purple-700 max-w-[120px] truncate"></span>
+
+            <!-- Right side: compact on mobile -->
+            <div class="flex items-center gap-1.5">
+                <!-- User chip — mobile shows avatar only -->
+                <div id="nav-user" class="hidden items-center gap-1.5 px-2 py-1.5 bg-purple-50 border border-purple-100 rounded-xl">
+                    <span class="text-sm">👤</span>
+                    <span id="nav-user-name" class="text-[11px] font-black text-purple-700 hidden sm:block max-w-[100px] truncate"></span>
                 </div>
-                <!-- Team & Holiday quick buttons (Admin only) -->
-                <button onclick="adminGate(openTeamModal)" title="จัดการทีม (Admin)" class="p-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm hover:bg-slate-200 transition-all" style="font-size:16px;">👥</button>
-                <button onclick="adminGate(openHolidayModal)" title="แก้ไขวันหยุด (Admin)" class="p-2.5 bg-amber-50 text-amber-600 rounded-xl text-sm hover:bg-amber-100 transition-all" style="font-size:16px;">📅</button>
-                <button id="admin-panel-btn" onclick="openAdminPanel()" title="Admin Panel" class="hidden p-2.5 rounded-xl text-sm transition-all" style="font-size:16px;background:linear-gradient(135deg,#4c1d95,#7c3aed);color:white;">👑</button>
-                <button id="install-btn" onclick="installApp()" class="hidden items-center gap-1.5 px-3 py-2 bg-purple-100 text-purple-700 rounded-xl text-xs font-bold hover:bg-purple-200 transition-all border border-purple-200">
+
+                <!-- Admin panel (only admin) -->
+                <button id="admin-panel-btn" onclick="openAdminPanel()" title="Admin Panel"
+                    class="hidden p-2 rounded-xl text-sm transition-all" style="font-size:15px;background:linear-gradient(135deg,#4c1d95,#7c3aed);color:white;">👑</button>
+
+                <!-- Team/Holiday — admin only, hidden on small mobile -->
+                <button id="nav-btn-team" onclick="adminGate(openTeamModal)" title="จัดการทีม" class="hidden md:block p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all" style="font-size:14px;">👥</button>
+                <button id="nav-btn-holiday" onclick="adminGate(openHolidayModal)" title="แก้ไขวันหยุด" class="hidden md:block p-2 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 transition-all" style="font-size:14px;">📅</button>
+
+                <!-- PWA install (hidden until prompted) -->
+                <button id="install-btn" onclick="installApp()" class="hidden items-center gap-1 px-2.5 py-2 bg-purple-100 text-purple-700 rounded-xl text-xs font-bold hover:bg-purple-200 transition-all border border-purple-200">
                     <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                    <span class="hidden sm:inline">ติดตั้งแอป</span>
                 </button>
-                <button onclick="openAssignModal()" class="brand-primary text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-purple-200 hover:scale-105 transition-all">
+
+                <!-- Add task — PRIMARY action -->
+                <button onclick="openAssignModal()" class="brand-primary text-white px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 shadow-md shadow-purple-200 hover:scale-105 transition-all">
                     <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                    <span class="hidden sm:inline">มอบหมายงาน</span>
-                    <span class="sm:hidden">เพิ่ม</span>
+                    <span class="hidden sm:inline text-[13px]">มอบหมายงาน</span>
+                    <span class="sm:hidden text-[13px]">เพิ่ม</span>
                 </button>
-                <!-- Dark mode toggle -->
+
+                <!-- Dark mode + logout in overflow menu on mobile -->
                 <button id="dark-toggle" onclick="toggleDarkMode()" title="Dark / Light mode"
-                    class="p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all text-base">🌙</button>
-                <!-- Logout -->
-                <button onclick="doLogout()" title="ออกจากระบบ" class="p-2.5 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-all text-base">🚪</button>
+                    class="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all text-sm">🌙</button>
+                <button onclick="doLogout()" title="ออกจากระบบ"
+                    class="p-2 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-all text-sm hidden sm:flex">🚪</button>
             </div>
         </div>
     </nav>
 
     <main class="max-w-7xl mx-auto px-4 py-6">
         <!-- Stats -->
-        <div class="grid grid-cols-4 gap-3 mb-8">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             <div class="stat-card border-b-4 border-b-slate-300">
                 <p class="text-[9px] font-black text-slate-400 uppercase mb-1">ทั้งหมด</p>
                 <div class="text-3xl font-black text-slate-800" id="count-total">0</div>
@@ -922,8 +962,8 @@ service firebase.storage {
                 <button onclick="toggleAdvSearch()" id="adv-search-btn"
                     title="ค้นหาขั้นสูง"
                     class="flex-shrink-0 flex items-center gap-1.5 px-3 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-700 transition-all shadow-sm">
-                    <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
-                    <span class="hidden sm:inline">กรอง</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+                    <span>กรอง</span>
                     <span id="adv-active-count" class="hidden adv-active-badge">0</span>
                 </button>
                 <div class="relative flex-shrink-0">
@@ -1243,14 +1283,14 @@ service firebase.storage {
                         <label class="text-[10px] font-black uppercase text-slate-400 mb-1.5 block">สายงาน</label>
                         <select id="field-team" class="form-input" required></select>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="text-[10px] font-black uppercase text-slate-400 mb-1.5 block">วันเริ่มต้น</label>
-                            <input type="date" id="field-date" class="form-input" required>
+                            <label class="text-[10px] font-black uppercase text-slate-400 mb-1.5 block">📅 วันเริ่มต้น</label>
+                            <input type="date" id="field-date" class="form-input text-sm" required>
                         </div>
                         <div>
-                            <label class="text-[10px] font-black uppercase text-slate-400 mb-1.5 block">วันสิ้นสุด</label>
-                            <input type="date" id="field-date-end" class="form-input">
+                            <label class="text-[10px] font-black uppercase text-slate-400 mb-1.5 block">📅 วันสิ้นสุด</label>
+                            <input type="date" id="field-date-end" class="form-input text-sm">
                         </div>
                     </div>
                 </div>
@@ -3536,6 +3576,7 @@ service firebase.storage {
                                 ? ' <span style="background:#7c3aed;color:white;font-size:9px;padding:1px 5px;border-radius:6px;font-weight:900;vertical-align:middle;">ADMIN</span>'
                                 : '');
                         document.getElementById('nav-user').classList.remove('hidden');
+                document.getElementById('nav-user').classList.add('flex');
                         const adminBtn = document.getElementById('admin-panel-btn');
                         if (adminBtn) adminBtn.classList.toggle('hidden', !isAdminUser);
                         document.getElementById('login-screen').classList.add('hidden');
