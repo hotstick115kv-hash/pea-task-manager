@@ -360,14 +360,80 @@
         #pres-mode.active { display: block; }
 
         /* Lightbox with slideshow */
-        #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.97); z-index: 200; align-items: center; justify-content: center; }
+        /* ── Lightbox ─────────────────────────────────────────── */
+        #lightbox {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.97); z-index: 9000;
+            flex-direction: column; align-items: center; justify-content: center;
+            touch-action: pan-y;
+        }
         #lightbox.active { display: flex; }
-        #lightbox-img { max-width: 88vw; max-height: 85vh; object-fit: contain; border-radius: 8px; transition: opacity 0.2s; }
-        #lb-counter { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(255,255,255,0.12); color: white; padding: 5px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; }
-        .lb-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.12); border: none; color: white; width: 52px; height: 52px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 22px; transition: background 0.2s; z-index: 10; }
-        .lb-btn:hover { background: rgba(255,255,255,0.25); }
-        #lb-prev { left: 16px; }
-        #lb-next { right: 16px; }
+
+        /* Image — fills screen correctly on all orientations */
+        #lightbox-img {
+            max-width: min(88vw, 900px);
+            max-height: calc(100dvh - 120px);
+            width: auto; height: auto;
+            object-fit: contain;
+            border-radius: 10px;
+            transition: opacity 0.2s;
+            user-select: none; -webkit-user-select: none;
+            pointer-events: none;
+        }
+
+        /* Counter */
+        #lb-counter {
+            position: absolute; top: max(16px, env(safe-area-inset-top, 16px));
+            left: 50%; transform: translateX(-50%);
+            background: rgba(255,255,255,0.15);
+            color: white; padding: 5px 16px; border-radius: 20px;
+            font-size: 13px; font-weight: 700;
+            pointer-events: none; white-space: nowrap;
+        }
+
+        /* Close button — top-right, always visible */
+        #lb-close {
+            position: absolute;
+            top: max(12px, env(safe-area-inset-top, 12px));
+            right: max(12px, env(safe-area-inset-right, 12px));
+            width: 44px; height: 44px;
+            background: rgba(255,255,255,0.18);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white; border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; font-weight: 300; line-height: 1;
+            z-index: 10; transition: background 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #lb-close:active { background: rgba(255,255,255,0.32); transform: scale(0.92); }
+
+        /* Prev / Next nav buttons */
+        .lb-btn {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(255,255,255,0.14); border: 1.5px solid rgba(255,255,255,0.25);
+            color: white; width: 48px; height: 48px; border-radius: 50%;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 22px; font-weight: 700; z-index: 10;
+            transition: background 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .lb-btn:active { background: rgba(255,255,255,0.28); }
+        #lb-prev { left: max(12px, env(safe-area-inset-left, 12px)); }
+        #lb-next { right: max(12px, env(safe-area-inset-right, 12px)); }
+
+        /* Swipe hint text */
+        #lb-swipe-hint {
+            position: absolute; bottom: max(20px, env(safe-area-inset-bottom, 20px));
+            left: 50%; transform: translateX(-50%);
+            color: rgba(255,255,255,0.35); font-size: 11px; font-weight: 600;
+            pointer-events: none; white-space: nowrap;
+        }
+
+        @media (max-width: 640px) {
+            #lightbox-img { max-width: 100vw; max-height: calc(100dvh - 100px); border-radius: 8px; }
+            .lb-btn { width: 44px; height: 44px; font-size: 20px; }
+            #lb-prev { left: 6px; } #lb-next { right: 6px; }
+        }
         #lb-close { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.12); border: none; color: white; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; z-index: 10; }
         #lb-close:hover { background: rgba(239,68,68,0.7); }
 
@@ -408,8 +474,12 @@
         @media (max-width: 640px) {
             /* ── Base ── */
             body { -webkit-tap-highlight-color: transparent; }
-            main { padding: 12px 10px 90px !important; }
+            main { padding: 10px 10px 90px !important; }
             nav { padding: 8px 12px !important; height: auto !important; min-height: 56px; }
+
+            /* Remove large gap between search and calendar */
+            .flex.flex-col.sm\\:flex-row { gap: 8px !important; margin-bottom: 8px !important; }
+            #view-calendar, #view-list { margin-top: 0 !important; }
 
             /* ── Navbar ── */
             #nav-user { max-width: 42px; }
@@ -867,11 +937,13 @@ service firebase.storage {
 
     <!-- Lightbox Slideshow -->
     <div id="lightbox">
-        <button id="lb-close" onclick="closeLightbox()"><i data-lucide="x" class="w-5 h-5"></i></button>
-        <button class="lb-btn" id="lb-prev" onclick="lbMove(-1)"><i data-lucide="chevron-left" class="w-6 h-6"></i></button>
-        <img id="lightbox-img" src="">
-        <button class="lb-btn" id="lb-next" onclick="lbMove(1)"><i data-lucide="chevron-right" class="w-6 h-6"></i></button>
+        <!-- Close: ✕ text symbol — renders on all platforms -->
+        <button id="lb-close" onclick="closeLightbox()" aria-label="ปิด">&#x2715;</button>
+        <button class="lb-btn" id="lb-prev" onclick="lbMove(-1)" aria-label="ก่อนหน้า">&#8249;</button>
+        <img id="lightbox-img" src="" alt="ภาพแนบ" draggable="false">
+        <button class="lb-btn" id="lb-next" onclick="lbMove(1)" aria-label="ถัดไป">&#8250;</button>
         <div id="lb-counter"></div>
+        <div id="lb-swipe-hint">← เลื่อนเพื่อดูภาพถัดไป →</div>
     </div>
 
     <nav class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40">
@@ -924,9 +996,9 @@ service firebase.storage {
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-4 py-6">
+    <main class="max-w-7xl mx-auto px-4 py-4 sm:py-6">
         <!-- Stats -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 sm:mb-6">
             <div class="stat-card border-b-4 border-b-slate-300">
                 <p class="text-[9px] font-black text-slate-400 uppercase mb-1">ทั้งหมด</p>
                 <div class="text-3xl font-black text-slate-800" id="count-total">0</div>
@@ -946,7 +1018,7 @@ service firebase.storage {
         </div>
 
         <!-- Toolbar -->
-        <div class="flex flex-col sm:flex-row justify-between items-center gap-3 mb-5">
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-3 mb-3 sm:mb-5">
             <div class="bg-white p-1 rounded-2xl border border-slate-200 flex shadow-sm">
                 <button onclick="setView('calendar')" id="btn-calendar" class="px-5 py-2 rounded-xl text-sm font-bold transition-all bg-slate-900 text-white shadow-md">ปฏิทิน</button>
                 <button onclick="setView('list')" id="btn-list" class="px-5 py-2 rounded-xl text-sm font-bold transition-all text-slate-500">รายการ</button>
@@ -985,7 +1057,7 @@ service firebase.storage {
         </div>
 
         <!-- Advanced Search Panel (collapsed by default) -->
-        <div id="adv-search-panel" class="bg-white border border-slate-200 rounded-2xl shadow-sm px-4 pt-3 pb-4 mb-3 mx-0">
+        <div id="adv-search-panel" class="bg-white border border-slate-200 rounded-2xl shadow-sm px-4 pt-3 pb-4 mb-2 mx-0">
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
                     <label class="adv-filter-label">ทีมงาน</label>
@@ -2242,14 +2314,51 @@ service firebase.storage {
             document.getElementById('lb-next').style.display = lbImages.length > 1 ? 'flex' : 'none';
         };
 
-        window.closeLightbox = () => document.getElementById('lightbox').classList.remove('active');
+        window.closeLightbox = () => {
+            document.getElementById('lightbox').classList.remove('active');
+            document.body.style.overflow = '';
+        };
 
-        // Keyboard navigation for lightbox
+        // Also open lightbox with scroll-lock
+        const _origOpenLightbox = window.openLightbox;
+        window.openLightbox = (idx) => {
+            if (_origOpenLightbox) _origOpenLightbox(idx);
+            else {
+                lbIndex = idx || 0;
+                updateLightbox();
+                document.getElementById('lightbox').classList.add('active');
+            }
+            document.body.style.overflow = 'hidden';
+        };
+
+        // Touch swipe: left/right = navigate, down = close
+        (() => {
+            let _tx = 0, _ty = 0;
+            const lb = document.getElementById('lightbox');
+            if (!lb) return;
+            lb.addEventListener('touchstart', e => {
+                _tx = e.touches[0].clientX;
+                _ty = e.touches[0].clientY;
+            }, { passive: true });
+            lb.addEventListener('touchend', e => {
+                const dx = e.changedTouches[0].clientX - _tx;
+                const dy = e.changedTouches[0].clientY - _ty;
+                if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 48) {
+                    lbMove(dx < 0 ? 1 : -1);
+                } else if (dy > 72 && Math.abs(dy) > Math.abs(dx)) {
+                    closeLightbox();
+                }
+            }, { passive: true });
+            // Tap dark backdrop → close
+            lb.addEventListener('click', e => { if (e.target === lb) closeLightbox(); });
+        })();
+
+        // Keyboard navigation
         document.addEventListener('keydown', e => {
             if (!document.getElementById('lightbox').classList.contains('active')) return;
             if (e.key === 'ArrowRight') lbMove(1);
-            if (e.key === 'ArrowLeft') lbMove(-1);
-            if (e.key === 'Escape') closeLightbox();
+            if (e.key === 'ArrowLeft')  lbMove(-1);
+            if (e.key === 'Escape')     closeLightbox();
         });
 
         // ---- Download Day ZIP ----
